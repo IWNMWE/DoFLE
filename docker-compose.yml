@@ -1,0 +1,17 @@
+services:
+  client:
+    build: ./client
+    volumes:
+      - client_volume:/usr/data
+    deploy:
+      replicas: 2 
+  server:
+    build: ./server
+    volumes:
+      - server_volume:/usr/data
+    ports:
+      - "8000:8000"
+
+volumes:
+  client_volume:
+  server_volume:
