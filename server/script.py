@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from scipy .special import softmax
 import tensorflow as tf
+import docker
 
 ##class MCLogisticRegressor:
 ##    def __init__(self, X, Y, W) -> None:
@@ -35,6 +36,9 @@ app = Flask(__name__)
 ##    logreg = MCLogisticRegressor(X_train, Y_train, w)
 ##    predictions = logreg.predict(X_test)
 ##    return np.sum(predictions == Y_test) / Y_test.shape[0] * 100
+
+def getClientContainers():
+    return docker.from_env().containers.list(filters={"name": "client"})
 
 @app.route('/server', methods=['POST'])
 def server():
