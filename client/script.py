@@ -8,6 +8,7 @@ from scipy .special import softmax
 import tensorflow as tf
 
 #ilename = "/usr/data/model.txt"
+hostname = os.environ['HOSTNAME']
 
 def create_model():
   model = tf.keras.Sequential([
