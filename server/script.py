@@ -21,7 +21,7 @@ def FSGD(weights,config):
     for i in range (0,len(weights)):
         for j in range (0,len(weights[i]["weights"])):
           final_weights[j] = np.add(final_weights[j], (weights[i]["datapoints"] / total) * weights[i]["weights"][j])
-    new_model = keras.Sequential.from_config(config) 
+    new_model = tf.keras.Sequential.from_config(config) 
     new_model.set_weights(final_weights)
     return new_model 
 
