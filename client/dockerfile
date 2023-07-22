@@ -14,4 +14,8 @@ WORKDIR /usr/app/src
 
 COPY script.py ./
 
+ENV PORT=8000
+
+EXPOSE 8000
+
 CMD ["python3", "./script.py"]
