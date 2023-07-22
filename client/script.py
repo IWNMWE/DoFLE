@@ -11,6 +11,7 @@ from flask import Flask, request
 
 modelfile = ' '
 datafolder = ' '
+
 datapoints = 0
 # Client class implementation for clients
 
@@ -71,7 +72,6 @@ class client:
     for i in range(0,len(w)):
           w[i] =  w[i].tolist()
     response = requests.post(url, json = {"weights" : w,"config" : model.get_config(),"datapoints":datapoints})
-    datapoints = 0
 
     if response.status_code == 200:
         print('Server response:', response.text)
