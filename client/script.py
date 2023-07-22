@@ -6,91 +6,104 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from scipy .special import softmax
 import tensorflow as tf
+from flask import Flask, request
 
-#ilename = "/usr/data/model.txt"
 hostname = os.environ['HOSTNAME']
 
-def create_model():
-  model = tf.keras.Sequential([
-    tf.keras.layers.Dense(512, activation='relu', input_shape=(784,)),
-    tf.keras.layers.Dropout(0.2),
-    tf.keras.layers.Dense(10)
-  ])
+modelfile = ' '
+datafolder = ' '
+datapoints = 0
+# Client class implementation for clients
 
-  model.compile(optimizer='adam',
+class client:
+
+  # Modelfile is the model stored in the H5 format datafolder should 
+  # be an image classification data set which can be passed in the 
+  # tensorflow image dataset from directory method 
+  def __init__(self,modelfile,datafolder):
+    self.modelfile = modelfile
+    self.datafolder = datafolder
+  
+  #Load model method
+  def loadmodel(self,modelfile = None):
+    if modelfile is None:
+      modelfile = self.modelfile
+    model = tf.keras.models.load_model(modelfile,compile = False)
+    model.compile(optimizer='adam',
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                 metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
-
-  return model
-
-##class MCLogisticRegressor:
-##    def __init__(self) -> None:
-##        pass
-##
-##    def train(self, X, Y) -> None:
-##        self.encoding_map = dict.fromkeys(np.unique(Y))
-##        for k, ele in enumerate(self.encoding_map.keys()):
-##            self.encoding_map[ele] = k
-##
-##        self.decoded_map = {}
-##        for k, ele in enumerate(self.encoding_map.keys()):
-##            self.decoded_map[k] = ele
-##        
-##        self.W = self.__gradient_descent__(X, Y)
-##
-##    def __gradient_descent__(self, X, Y, max_iterations=1000, alpha=0.1, mu=0.01):
-##        y_onehot_encoded = self.__onehot_encoded__(Y)
-##        W = np.zeros((X.shape[1], y_onehot_encoded.shape[1]))
-##
-##        for i in range(max_iterations):
-##            W -= alpha * self.__gradient__(X, y_onehot_encoded, W, mu)
-##        
-##        return W
-
-##   def __gradient__(self, X, Y, W, mu):
-##       Z = X @ W
-##       P = softmax(Z, axis=1)
-##       grad = (-1 / X.shape[0]) * (X.T @ (Y - P)) + 2 * mu * W
-##       return grad       
-##   def __loss__(self, X, Y, W):
-##       Z = X @ W
-##       loss = (1 / X.shape[0]) * (-np.trace(X @ W @ Y.T) + np.sum(np.log(np.sum(np.exp(Z), axis=1))))
-##       return loss
-##   def __onehot_encoded__(self, y):
-##       y_onehot_encoded = np.zeros((y.shape[0], len(self.encoding_map.keys())))
-##       for i, ele in enumerate(y_onehot_encoded):
-##           ele[self.encoding_map[y[i]]] = 1
-##       
-##       return y_onehot_encoded
-def trainAndSaveModel():
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-    assert x_train.shape == (60000, 28, 28)
-    assert x_test.shape == (10000, 28, 28)
-    assert y_train.shape == (60000,)
-    assert y_test.shape == (10000,)
-    x_train = x_train.reshape(-1,28*28) / 255.0
-    x_test = x_test.reshape(-1,28*28) / 255.0
-    model = create_model()
-    model.fit(x_train,y_train,epochs = 1,validation_data = (x_test,y_test))
     return model
+  
+  #Loading the image classification data set
+  def load_dataset(self,datafolder = None):
+    if datafolder is None:
+      datafolder = self.datafolder
 
+    train_ds = tf.keras.utils.image_dataset_from_directory(
+              datafolder,
+              seed = 123,
+              image_size=(28, 28),
+              batch_size = 1)
+    return train_ds
 
+  # Prepares a normalized dataset and trains the model
+  # stores the model in the modelfile directory
+  def train(self,train_ds = None,model = None,modelfile = None):
     
+    global datapoints
+    if train_ds is None:
+      train_ds = self.load_dataset()
+    if model is None:
+      model = self.loadmodel()
+    if modelfile is None:
+      modelfile = self.modelfile
+    
+    normalization_layer = tf.keras.layers.Rescaling(1./255)
+    normalized_ds = train_ds.map(lambda x,y : (normalization_layer(x),y))
+    datapoints = datapoints + len(list(normalized_ds))
+    model.fit(normalized_ds,epochs = 1)
+    model.save(modelfile)
 
-def client():
+  def send_server(self):
+    global datapoints
     url = 'http://server:8000/server'  # Replace with the server URL
-    model = trainAndSaveModel()
+    model = self.loadmodel()
     w = model.get_weights()
     for i in range(0,len(w)):
           w[i] =  w[i].tolist()
-    response = requests.post(url, json = {"weights" : w,"config" : model.get_config()})
-
+    response = requests.post(url, json = {"weights" : w,"config" : model.get_config(),"datapoints":datapoints})
+    datapoints = 0
 
     if response.status_code == 200:
         print('Server response:', response.text)
     else:
         print('Error:', response.status_code)
+  
+## Flask app is run to recive the model
+app = Flask(__name__)
+
+@app.route('/client', methods=['POST'])
+def recieve():
+  if request.method == 'POST':
+    config = request.json["config"]
+    model = tf.keras.Sequential().from_config(config)
+    weights = request.json["weights"]
+    for i in range(0,len(weights)):
+          weights[i] =  np.array(weights[i])
+        
+    model.set_weights(weights)
+    model.save(modelfile)
+
+  else:
+        return 'Invalid request method'
+
+   
 
 if __name__ == '__main__':
-    trainAndSaveModel()
-    client()
+    modelfile = input() 
+    datafolder = input() 
+    cli = client(modelfile,datafolder)
+    cli.train()
+    cli.send_server()
+    app.run(host = '0.0.0.0',port = 5000)
+
