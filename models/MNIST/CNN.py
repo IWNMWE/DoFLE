@@ -20,4 +20,4 @@ def CNN2D():
 
 if __name__ == '__main__':
     model = CNN2D()
-    model.save('CNN2D.h5')
+    model.save('.\CNN2D.h5')
