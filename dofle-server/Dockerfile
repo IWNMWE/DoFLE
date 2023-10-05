@@ -4,6 +4,7 @@ RUN pip3 install asyncio
 RUN pip3 install flask
 RUN pip3 install numpy  
 RUN pip3 install tensorflow
+RUN pip3 install redis
 
 WORKDIR /usr/app/src
 
