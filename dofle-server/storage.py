@@ -28,7 +28,7 @@ class Storage:
     def store(self, prefix, model) -> str:
         """Stores the model under a randomly generated string with
             prefix [prefix]. The [model] is packed in a '>II' binary
-            format before stroing.
+            format before storing.
 
         Args:    
             prefix: A string that will be the prefix of the key
