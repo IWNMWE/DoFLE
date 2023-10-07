@@ -6,6 +6,21 @@ import tensorflow as tf
 
 app = Flask(__name__)
 
+# List of subsribed client ids
+clients = []
+
+# List of client ids selected for the current
+# round of Federated Averaging
+selected_clients = []
+
+# List of client ids that map to model updates
+# sent from selected clients
+client_models = []
+
+# List of version numbers that map to global
+# models
+global_models = []
+
 # Import the server routes
 import routes
 

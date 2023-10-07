@@ -4,21 +4,6 @@ import uuid
 import struct
 import numpy as np
 
-# List of subsribed client ids
-clients = []
-
-# List of client ids selected for the current
-# round of Federated Averaging
-selected_clients = []
-
-# List of client ids that map to model updates
-# sent from selected clients
-client_models = []
-
-# List of version numbers that map to global
-# models
-global_models = []
-
 
 class Storage:
     def __init__(self) -> None:
@@ -45,7 +30,7 @@ class Storage:
 
         self._db.set(key, encoded_model)
         return key
-    
+
     def retrieve(self, key) -> np.ndarray:
         """Retrieves the model stored under key [key]. The model is
             unpacked and converted into an np.ndarray before its
@@ -58,10 +43,10 @@ class Storage:
             model: The stored model interpreted as a np.ndarray.
         """
         encoded = self._db.get(key)
-        h, w = struct.unpack('>II',encoded[:8])
-        model = np.frombuffer(encoded[8:]).reshape(h,w)
+        h, w = struct.unpack('>II', encoded[:8])
+        model = np.frombuffer(encoded[8:]).reshape(h, w)
         return model
-    
+
     def remove(self, key) -> None:
         """Removes the model stored under key [key] from the buffer.
 
