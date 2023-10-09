@@ -1,8 +1,8 @@
 # Storage manager
 import redis
 import uuid
-import struct
 import numpy as np
+import json
 
 
 class Storage:
@@ -12,39 +12,42 @@ class Storage:
 
     def store(self, prefix, model) -> str:
         """Stores the model under a randomly generated string with
-            prefix [prefix]. The [model] is packed in a '>II' binary
-            format before storing.
+            prefix [prefix]. The weights matrix is converted to a list
+            before storing.
 
         Args:    
             prefix: A string that will be the prefix of the key
-            model:  A weight matrix (numpy array) to be stored
+            model:  A json with fields containing a weights matrix (numpy array)
+                    and the datapoints to be stored
 
         Returns:
             key: The key with which the model is stored.
         """
         key = prefix + str(uuid.uuid4())
 
-        h, w = model.shape
-        shape = struct.pack('>II', h, w)
-        encoded_model = shape + model.tobytes()
+        json_dumps = json.dumps({
+            "weights": model["weights"].tolist(),
+            "datapoints": model["datapoints"]
+        })
 
-        self._db.set(key, encoded_model)
+        self._db.set(key, json_dumps)
         return key
 
     def retrieve(self, key) -> np.ndarray:
-        """Retrieves the model stored under key [key]. The model is
-            unpacked and converted into an np.ndarray before its
-            returned.
+        """Retrieves the model stored under key [key]. The weights 
+            matrix is converted into an np.ndarray before
+            it's returned.
 
         Args:    
             key: A string that is used to identify the model
 
         Returns:
-            model: The stored model interpreted as a np.ndarray.
+            model: A json with fields containing a weights matrix
+            (interpreted as a np.ndarray) and datapoints
         """
-        encoded = self._db.get(key)
-        h, w = struct.unpack('>II', encoded[:8])
-        model = np.frombuffer(encoded[8:]).reshape(h, w)
+        model = json.loads(self._db.get(key))
+
+        model["weights"] = np.asarray(model["weights"])
         return model
 
     def remove(self, key) -> None:
