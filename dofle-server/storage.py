@@ -25,10 +25,9 @@ class Storage:
         """
         key = prefix + str(uuid.uuid4())
 
-        json_dumps = json.dumps({
-            "weights": model["weights"].tolist(),
-            "datapoints": model["datapoints"]
-        })
+        json_model = model.copy()
+        json_model["weights"] = model["weights"].tolist()
+        json_dumps = json.dumps(json_model)
 
         self._db.set(key, json_dumps)
         return key
