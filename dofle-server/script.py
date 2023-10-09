@@ -4,6 +4,10 @@ import numpy as np
 import asyncio
 import tensorflow as tf
 
+# Import storage class
+from storage import Storage
+storage = Storage()
+
 app = Flask(__name__)
 
 # List of subsribed client ids
@@ -13,9 +17,9 @@ clients = []
 # round of Federated Averaging
 selected_clients = []
 
-# List of client ids that map to model updates
+# Map of client ids that map to model updates
 # sent from selected clients
-client_models = []
+client_models = {}
 
 # List of version numbers that map to global
 # models
@@ -24,9 +28,6 @@ global_models = []
 # Import the server routes
 import routes
 
-# Import storage class
-from storage import Storage
-storage = Storage()
 
 # Entry point
 if __name__ == '__main__':
