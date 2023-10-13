@@ -8,4 +8,4 @@ WORKDIR /usr/app/src
 
 COPY *.py ./
 
-CMD ["python3", "script.py"]
+CMD ["python3", "-u", "script.py"]
