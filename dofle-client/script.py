@@ -136,6 +136,11 @@ class Client:
             print("Request exception: " + str(exp))
 
     def pollForStatus(self):
+        """Gets the status of the client with respect to the FL process.
+           If the client is not selected, it polls again. If the client
+           is selected, the client can start training the model.
+        """
+
         url = baseUrl + getFLStatusUrl
         try:
             response = requests.get(url, json={
@@ -158,6 +163,15 @@ class Client:
             print("Failed to get FL status: " + str(exp))
         
     def sendModelUpdates(self, modelFile = None,model = None):
+        """Sends the [model] updates to the server. If the [model] is
+           not provided, it uses [modelFile] and client's implementation
+           of loading model to get the model.
+
+        Params:    
+            modelFile: The modelFile that contains the model to be sent
+            model: A model whose updates will be sent
+        """
+
         url = baseUrl + sendModelUrl
         try:
             if model == None:
