@@ -1,10 +1,12 @@
 # Server routes definitions
-from __main__ import app, clients, client_models, storage
+from __main__ import app, clients, selected_clients, client_models, storage
 from flask import request
 import numpy as np
 
 currentClientId = 0
 
+CLIENT_NOT_SELECTED = 'Client has not been selected for the process', 200
+MODEL_ALREADY_RECEIVED = 'Client\'s model has already been receieved', 200
 NO_CONTENT = '', 204
 CLIENT_NOT_REGISTERED = 'No matching client id found', 403
 INVALID_REQUEST = 'Invalid request method', 405
@@ -47,11 +49,13 @@ def subscribe():
 
 @app.route('/model_updates', methods=['POST'])
 def receiveModelUpdates():
-    """Receives models sent by a client.
+    """Receives models sent by a selected client.
 
-    Receives a JSON file from the POST requests
-    sent by clients and stores the local weights,
-    number of datapoints and the version.
+    Request Params:    
+        id: The id of the client assigned by the FL system
+        weights: The weight matrix of the model (as a list)
+        datapoints: The number of datapoints the client has trained on
+        version: The version of the model the client has trained on
     """
         
     if request.method == 'POST':
@@ -59,6 +63,14 @@ def receiveModelUpdates():
             id = request.json["id"]
             if not any(x["id"] == id for x in clients):
                 return CLIENT_NOT_REGISTERED
+            
+            if id not in selected_clients:
+                msg, _ = CLIENT_NOT_SELECTED
+                return msg, 403
+            
+            if id in client_models.keys():
+                return MODEL_ALREADY_RECEIVED
+            
             model = {
                 "weights": np.asarray(request.json["weights"]),
                 "datapoints": request.json["datapoints"],
