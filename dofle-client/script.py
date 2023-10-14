@@ -8,6 +8,8 @@ import os
 # Base URL of the central server and URLs of all endpoints
 baseUrl = "http://server:8000"
 subscribeUrl = "/subscribe"
+sendModelUrl = "/model_updates"
+getFLStatusUrl = "/fl_process_status"
 
 class Client:
     def __init__(self, name=None, modelFile=None, dataFolder=None) -> None:
@@ -26,6 +28,13 @@ class Client:
 
         # A directory containing the training data set
         self.dataFolder = dataFolder
+
+        # Number of datapoints the client model has been trained upon
+        self.datapoints = 0
+
+        # An identifier representing the version of the model with the
+        # client with respect to the Federated Learning process
+        self.version = None
 
     def loadModel(self, modelFile=None):
         """Loads a model from the [modelFile]. If it is not provided,
@@ -78,7 +87,7 @@ class Client:
             print("Failed to load dataset: " + str(exp))
     
     def train(self,train_ds = None,model = None,modelFile = None):
-        """Trains the [model] with the [train_ds] aand saves it as a h5
+        """Trains the [model] with the [train_ds] and saves it as a h5
            model into the [modelFile] file. In case any of these params
            are None, they are loaded through the client's interface.
 
@@ -100,6 +109,7 @@ class Client:
             normalization_layer = tf.keras.layers.Rescaling(1./255)
             normalized_ds = train_ds.map(lambda x,y : (normalization_layer(x),y))
             model.fit(normalized_ds,epochs = 1)
+            self.datapoints += len(list(normalized_ds))
             model.save(modelFile)
         except Exception as exp:
             print("Failed to train model: " + str(exp))
@@ -121,15 +131,61 @@ class Client:
                 print("Subscribed with id " + str(self.id))
             else:
                 print("Response error: " +
-                      str(response.status_code) + ":" + response.json)
+                      str(response.status_code) + ":" + response.text)
         except Exception as exp:
             print("Request exception: " + str(exp))
 
+    def pollForStatus(self):
+        url = baseUrl + getFLStatusUrl
+        try:
+            response = requests.get(url, json={
+                "id": self.id
+            })
+
+            if response.status_code == 200:
+                status = response.json()["status"]
+                print(status)
+                if "not" in status:
+                    # Poll again after sometime later
+                    pass
+                else:
+                    # Start training
+                    pass
+            else:
+                print("Response error: " +
+                      str(response.status_code) + ":" + response.text)
+        except Exception as exp:
+            print("Failed to get FL status: " + str(exp))
+        
+    def sendModelUpdates(self, modelFile = None,model = None):
+        url = baseUrl + sendModelUrl
+        try:
+            if model == None:
+                model = self.loadModel(modelFile = modelFile)
+
+            weights = model.get_weights().tolist()
+            response = requests.post(url, json={
+                "id": self.id,
+                "version": self.version,
+                "weights": weights,
+                "datapoints": self.datapoints
+            })
+
+            if response.status_code == 204:
+                print("Sent model updates")
+            elif response.status_code == 200:
+                print(response.text)
+            else:
+                print("Response error: " +
+                      str(response.status_code) + ":" + response.text)
+        except Exception as exp:
+            print("Failed to send model updates: " + str(exp))
 
 # Entry point
 if __name__ == '__main__':
     # client = Client(modelFile="x.h5", dataFolder="test")
     # client.train()
     # client.subscribeToFL()
+    # client.pollForStatus()
     while True:
         pass
