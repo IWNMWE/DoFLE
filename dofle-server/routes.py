@@ -6,6 +6,7 @@ import numpy as np
 currentClientId = 0
 
 CLIENT_NOT_SELECTED = 'Client has not been selected for the process', 200
+CLIENT_SELECTED = 'Client has been selected for the process', 200
 MODEL_ALREADY_RECEIVED = 'Client\'s model has already been receieved', 200
 NO_CONTENT = '', 204
 CLIENT_NOT_REGISTERED = 'No matching client id found', 403
@@ -82,6 +83,37 @@ def receiveModelUpdates():
             }
 
             return NO_CONTENT
+        except:
+            return UNPROCESSABLE_ENTITY
+    else:
+        return INVALID_REQUEST
+
+@app.route('/fl_process_status', methods=['GET'])
+def flProcessStatus():
+    """Returns the status of the Federated Learning process by
+       informing the client if it has been selected for the process.
+
+    Request Params:    
+        id: The id of the client assigned by the FL system
+
+    Returns:
+        status: A message sigifying the selection of the client
+    """
+
+    if request.method == 'GET':
+        try:
+            id = request.json["id"]
+            if not any(x["id"] == id for x in clients):
+                return CLIENT_NOT_REGISTERED
+            
+            msg = ""
+            code = None
+            if id not in selected_clients:
+                msg, code = CLIENT_NOT_SELECTED
+            else:
+                msg, code = CLIENT_SELECTED
+            
+            return {"status": msg}, code
         except:
             return UNPROCESSABLE_ENTITY
     else:
