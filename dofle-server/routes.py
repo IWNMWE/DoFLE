@@ -1,5 +1,6 @@
 # Server routes definitions
-from __main__ import app, clients, selected_clients, client_models, storage
+from __main__ import app, storage, fed
+from federate_learning import FLMode
 from flask import request
 import numpy as np
 
@@ -8,6 +9,7 @@ currentClientId = 0
 CLIENT_NOT_SELECTED = 'Client has not been selected for the process', 200
 CLIENT_SELECTED = 'Client has been selected for the process', 200
 MODEL_ALREADY_RECEIVED = 'Client\'s model has already been receieved', 200
+MODEL_NOT_TRAINED = 'New model is not yet ready', 200
 NO_CONTENT = '', 204
 CLIENT_NOT_REGISTERED = 'No matching client id found', 403
 INVALID_REQUEST = 'Invalid request method', 405
@@ -38,7 +40,7 @@ def subscribe():
                 "id": id,
                 "name": name
             }
-            clients.append(client)
+            fed.clients.append(client)
             
             return {
                 "client": client,
@@ -62,14 +64,14 @@ def receiveModelUpdates():
     if request.method == 'POST':
         try:
             id = request.json["id"]
-            if not any(x["id"] == id for x in clients):
+            if not any(x["id"] == id for x in fed.clients):
                 return CLIENT_NOT_REGISTERED
             
-            if id not in selected_clients:
+            if id not in fed.selected_clients:
                 msg, _ = CLIENT_NOT_SELECTED
                 return msg, 403
             
-            if id in client_models.keys():
+            if id in fed.client_models.keys():
                 return MODEL_ALREADY_RECEIVED
             
             model = {
@@ -77,10 +79,11 @@ def receiveModelUpdates():
                 "datapoints": request.json["datapoints"],
             }
             model_key = storage.store("c", model)
-            client_models[id] = {
+            fed.client_models[id] = {
                 "version": request.json["version"],
                 "model_key": model_key
             }
+            fed.changeMode()
 
             return NO_CONTENT
         except:
@@ -97,18 +100,18 @@ def flProcessStatus():
         id: The id of the client assigned by the FL system
 
     Returns:
-        status: A message sigifying the selection of the client
+        status: A message signifying the selection of the client
     """
 
     if request.method == 'GET':
         try:
             id = request.json["id"]
-            if not any(x["id"] == id for x in clients):
+            if not any(x["id"] == id for x in fed.clients):
                 return CLIENT_NOT_REGISTERED
             
             msg = ""
             code = None
-            if id not in selected_clients:
+            if id not in fed.selected_clients:
                 msg, code = CLIENT_NOT_SELECTED
             else:
                 msg, code = CLIENT_SELECTED

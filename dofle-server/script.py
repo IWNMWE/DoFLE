@@ -10,20 +10,9 @@ storage = Storage()
 
 app = Flask(__name__)
 
-# List of subsribed client ids
-clients = []
-
-# List of client ids selected for the current
-# round of Federated Averaging
-selected_clients = []
-
-# Map of client ids that map to model updates
-# sent from selected clients
-client_models = {}
-
-# List of version numbers that map to global
-# models
-global_models = []
+# Import federated learning functionalities
+from federate_learning import FederatedLearningComponent
+fed = FederatedLearningComponent()
 
 # Import the server routes
 import routes
