@@ -121,3 +121,51 @@ def flProcessStatus():
             return UNPROCESSABLE_ENTITY
     else:
         return INVALID_REQUEST
+
+@app.route('/get_global_model', methods=['GET'])
+def getGlobalModel():
+    """Returns the global model if the round of training has
+       been completed and the client is selected for the next
+       round.
+
+    Request Params:    
+        id: The id of the client assigned by the FL system
+
+    Returns:
+        version: The version of the global model
+        weights: The weight matrix of the model (as a list)
+    """
+
+    if request.method == 'GET':
+        try:
+            id = request.json["id"]
+            
+            try:
+                if not any(x["id"] == id for x in fed.clients):
+                    return CLIENT_NOT_REGISTERED
+
+                if id not in fed.selected_clients:
+                    return CLIENT_NOT_SELECTED
+
+                if (fed.flMode == FLMode.AGGREGATING or
+                    fed.flMode == FLMode.WAITING_FOR_MODELS or
+                    fed.global_models):
+                    return MODEL_NOT_TRAINED
+
+                modelWeights = storage.retrieve(fed.global_models[-1]["model_key"])
+                modelWeights = modelWeights.tolist()
+
+                model = fed.global_models[-1].copy()
+                model["weights"] = modelWeights
+
+                if id not in fed.selected_clients_with_model:
+                    fed.selected_clients_with_model.append(id)
+                    fed.changeMode()
+
+                return model, 200
+            except:
+                return INTERNAL_SERVER_ERROR
+        except:
+            return UNPROCESSABLE_ENTITY
+    else:
+        return INVALID_REQUEST
