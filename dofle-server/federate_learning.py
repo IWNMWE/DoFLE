@@ -33,6 +33,7 @@ class FederatedLearningComponent():
 
         # Mode the federated learning system is in
         self.flMode = FLMode.WAITING_FOR_SELECTED_CLIENTS
+        print("Server mode: ", self.flMode.name)
 
         #The string contaning the method name
         self.method = method
@@ -95,20 +96,21 @@ class FederatedLearningComponent():
 
         if self.flMode == FLMode.WAITING_FOR_MODELS:
             if (len(self.selected_clients) ==
-                len(self.client_models)):
+                len(self.client_models.keys())):
                 self.flMode = FLMode.AGGREGATING
-                [gw , gC] = self.server_train()
-
-                
+                gw, gC = self.server_train()
+                    
                 key = storage.store("w", models.arrayToList(gw))
                 key_dash = storage.store("c",models.arrayToList(gC))
 
                 self.global_models.append({
-                    "version" :  self.global_weights[-1]['version'] + 1, 
+                    "version" :  self.global_models[-1]['version'] + 1, 
                     "model_key" : key,
                     "global_C_key"  : key_dash
                 })
+                self.client_models = {}
                 self.flMode = FLMode.WAITING_FOR_SELECTED_CLIENTS
+                print("Server mode: ", self.flMode.name)
 
         if self.flMode == FLMode.WAITING_FOR_SELECTED_CLIENTS:
             if (len(self.selected_clients) ==
@@ -119,6 +121,7 @@ class FederatedLearningComponent():
                     prevSelection=self.selected_clients
                 )
                 self.flMode = FLMode.WAITING_FOR_MODELS
+                print("Server mode: ", self.flMode.name)
 
     def update_global(self, global_weights, delta_weights,
                      nk, global_C,delta_c):
@@ -135,49 +138,48 @@ class FederatedLearningComponent():
 
         total_datapoints = 0
         for n in nk:
-            total_datapoints = total_datapoints + 1
+            total_datapoints = total_datapoints + n
         
         if(self.method == "scaffold" or self.method == "SCAFFOLD"):
-
             for delta_weight in delta_weights:
                 for i in range(0, len(global_weights)):
                     global_weights[i] = (global_weights[i] 
-                                        + (delta_weights[i] 
+                                        + (delta_weight[i] 
                                         * (self.global_lr * nk[ind]/float(total_datapoints))))
                     global_C[i] = (global_C[i] 
-                                + (delta_c[i] * (nk[ind]/float(total_datapoints))) 
+                                + (delta_c[ind][i] * (nk[ind]/float(total_datapoints))) 
                                 * (len(delta_weight) / float(len(self.clients))))
                 
                 ind = ind + 1
                 
-            return [global_weights,global_C]
+            return global_weights,global_C
         
-        if(self.method == "avg" or self.method == "AVG"): 
+        if(self.method == "avg" or self.method == "AVG"):
             for delta_weight in delta_weights:
                 for i in range(0, len(global_weights)):
                     global_weights[i] = global_weights[i] 
-                    + (delta_weights[i] * (self.global_lr * nk[ind]/float(total_datapoints)))
+                    + (delta_weight[i] * (self.global_lr * nk[ind]/float(total_datapoints)))
                 
                 ind = ind + 1
 
-            return [global_weights]
+            return global_weights
 
     def server_train(self):
         delta_weights = []
         nk = []
-        delta_c = []     
-        for _, model in self.client_models:
-           model_dict = storage.retrieve(model['model_key'])
+        delta_c = []
+
+        for id in self.client_models.keys():
+            model_dict = storage.retrieve(self.client_models[id]['model_key'])
            
-           delta_weights.append(models.listToArray(model_dict['delta_weights']))
-           nk.append(model_dict["datapoints"])
+            delta_weights.append(models.listToArray(model_dict['delta_weights']))
+            nk.append(model_dict["datapoints"])
         
-        if self.method == "scaffold" or self.method == "SCAFFOLD":
-            for _, model in self.client_models:
+            if self.method == "scaffold" or self.method == "SCAFFOLD":
                 delta_c.append(models.listToArray(model_dict['delta_C']))
 
-        weights = models.listToArray(storage.retrieve(self.global_weights[-1]['model_key']))
-        globalC = models.listToArray(storage.retrieve(self.global_weights[-1]['global_C_key']))
+        weights = models.listToArray(storage.retrieve(self.global_models[-1]['model_key']))
+        globalC = models.listToArray(storage.retrieve(self.global_models[-1]['global_C_key']))
         return self.update_global(weights, delta_weights,
                      nk,globalC,delta_c)
            

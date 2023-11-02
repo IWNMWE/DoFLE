@@ -207,6 +207,7 @@ class Client:
         globalModel = None
 
         def getModel():
+            nonlocal globalModel
             try:
                 response = requests.get(url, json={
                     "id": self.id
@@ -240,8 +241,8 @@ class Client:
         # Got global model, start training
         if globalModel is not None:
             C = Fed_algo.convert_tond(globalModel["globalC"])
-            Global = Fed_algo.convert_tond(globalModel["weigths"])
-            [delta_weights,delta_C,n] = self.baseClient.train(C , Global)
+            Global = Fed_algo.convert_tond(globalModel["weights"])
+            delta_weights,delta_C,n = self.baseClient.train(C , Global)
             self.sendModelUpdates(delta_C,delta_weights,n)
             self.pollForGlobalModel()
         

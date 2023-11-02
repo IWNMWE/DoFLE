@@ -152,7 +152,7 @@ def getGlobalModel():
 
                 if (fed.flMode == FLMode.AGGREGATING or
                     fed.flMode == FLMode.WAITING_FOR_MODELS or
-                    fed.global_models):
+                    len(fed.global_models) == 0):
                     msg, code = MODEL_NOT_TRAINED
                     return {"status": msg}, code
 

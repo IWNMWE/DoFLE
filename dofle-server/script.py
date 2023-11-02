@@ -35,14 +35,13 @@ if __name__ == '__main__':
         i.fill(0)
 
     temp = models.arrayToList(temp)
-    key_dash = storage.store("w", temp)
+    key_dash = storage.store("c", temp)
 
     fed.global_models.append({
         "version" : 1, 
         "model_key" : key,
         "global_C_key"  : key_dash
     })
-    fed.selected_clients = fed.selectClientsForRound(fed.clients,prevSelection=fed.selected_clients)
 
     app.run(host='0.0.0.0', port=8000)
     while True:

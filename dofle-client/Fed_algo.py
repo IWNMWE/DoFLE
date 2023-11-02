@@ -29,6 +29,7 @@ class ClientScaffold:
     self.metrics = metrics
     self.optim  = optim
     self.optim.learning_rate = self.lr
+
   def train(self , C , Global):
     self.model.compile(optimizer = self.optim , loss = self.losses , metrics = self.metrics)
     self.model.set_weights(Global)
@@ -58,10 +59,10 @@ class ClientScaffold:
         self.cPlus[i] = self.c[i] - C[i] + (1 / ((1 / (len(batches) * self.lr))  
                         * (len(self.trainX) / self.batch))) * (Global[i] - weights[i])
         delta_weights[i] -=  Global[i]
-        delta_C[i] -= self.c[i]
+        delta_C[i] = self.cPlus[i] - self.c[i]
     self.c = list(self.cPlus)
     
-    return [delta_weights,delta_C,len(self.trainX)]
+    return delta_weights,delta_C,len(self.trainX)
   
   def initializeC(self):
     C = self.model.get_weights()
@@ -97,13 +98,13 @@ class ClientFedAvg:
     for i in range (0 , len(weights)):
         delta_weights[i] -=  Global[i]
     
-    return [delta_weights,len(self.trainX)]
+    return delta_weights,len(self.trainX)
 
 
 def convert_tolist(C):
   for i in range(0 , len(C)):
     C[i] = C[i].tolist()
-  return c
+  return C
 
 def convert_tond(C):
   for i in range (0,len(C)):
