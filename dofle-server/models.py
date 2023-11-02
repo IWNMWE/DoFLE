@@ -40,12 +40,3 @@ def prep_pixels(train, test):
  test_norm = test_norm / 255.0
  # return normalized images
  return train_norm, test_norm
-
- def convert_tolist(C):
-    for i in range(0 , len(C)):
-        C[i] = C[i].tolist()
-    return C
-def convert_tond(C):
-    for i in range(0,len(C)):
-        C[i] = np.array(C[i])
-    return C
