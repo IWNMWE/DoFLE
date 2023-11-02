@@ -37,10 +37,6 @@ class FederatedLearningComponent():
 
         #Global learning rate of the server 
         self.global_lr = global_lr
-
-        # Map of client ids that map to model updates
-        # sent from selected clients
-        self.delta_c = {}
    
     def selectClientsForRound(clients, prevSelection=None):
         """Selects [CLIENT_BATCH_SIZE] number of clients from the [clients]
@@ -99,7 +95,14 @@ class FederatedLearningComponent():
             if (len(self.selected_clients) ==
                 len(self.client_models)):
                 self.flMode = FLMode.AGGREGATING
-                self.server_train()
+                [gw , gC] = self.server_train()
+                key = storage.store("w",gw)
+                key_dash = storage.store("c",gC)
+                fed.global_models.append({
+                    "version" :  self.global_weights[-1]['version'] + 1, 
+                    "model_key" : key,
+                    "global_C_key"  : key_dash
+                })
                 self.flMode = FLMode.WAITING_FOR_SELECTED_CLIENTS
 
         if self.flMode == FLMode.WAITING_FOR_SELECTED_CLIENTS:

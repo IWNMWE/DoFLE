@@ -36,32 +36,32 @@ POLL_INTERVAL = 60
 
 
 def load_dataset():
- # load dataset
- (trainX, trainY), (testX, testY) = mnist.load_data()
- # reshape dataset to have a single channel
- trainX = trainX.reshape((trainX.shape[0], 28, 28, 1))
- testX = testX.reshape((testX.shape[0], 28, 28, 1))
- # one hot encode target values
- trainY = to_categorical(trainY)
- testY = to_categorical(testY)
+    # load dataset
+    (trainX, trainY), (testX, testY) = mnist.load_data()
+    # reshape dataset to have a single channel
+    trainX = trainX.reshape((trainX.shape[0], 28, 28, 1))
+    testX = testX.reshape((testX.shape[0], 28, 28, 1))
+    # one hot encode target values
+    trainY = to_categorical(trainY)
+    testY = to_categorical(testY)
 
-random_indices = np.random.choice(len(trainX), 10016, replace=False)
+    random_indices = np.random.choice(len(trainX), 10016, replace=False)
 
-# Select the subset of data and labels
-subset_X = trainX[random_indices]
-subset_Y = trainY[random_indices]
- return subset_X, subset_Y, testX, testY
+    # Select the subset of data and labels
+    subset_X = trainX[random_indices]
+    subset_Y = trainY[random_indices]
+    return subset_X, subset_Y, testX, testY
 
 
 def prep_pixels(train, test):
- # convert from integers to floats
- train_norm = train.astype('float32')
- test_norm = test.astype('float32')
- # normalize to range 0-1
- train_norm = train_norm / 255.0
- test_norm = test_norm / 255.0
- # return normalized images
- return train_norm, test_norm
+    # convert from integers to floats
+    train_norm = train.astype('float32')
+    test_norm = test.astype('float32')
+    # normalize to range 0-1
+    train_norm = train_norm / 255.0
+    test_norm = test_norm / 255.0
+    # return normalized images
+    return train_norm, test_norm
 
 class Client:
     def __init__(self, name=None, modelFile=None, dataFolder=None , lr = 0.01) -> None:
@@ -88,7 +88,7 @@ class Client:
         self.trainX, self.trainY, self.testX, self.testY = load_dataset()
         # prepare pixel data
         self.trainX, self.testX = prep_pixels(self.trainX, self.testX)
-        self.baseClient = ClientScaffold(self.trainX , self.trainY , self.testX , 
+        self.baseClient = Fed_algo.ClientScaffold(self.trainX , self.trainY , self.testX , 
                 self.testY , 32 , make_model() , 
                 tf.keras.losses.CategoricalCrossentropy(from_logits=True)
                  , [tf.keras.metrics.CategoricalAccuracy()] 
