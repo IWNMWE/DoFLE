@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tf.keras.models import load_model
 import numpy as np
 
 """
@@ -14,10 +13,10 @@ Currently supported methods :
 
 class ClientScaffold:
   def __init__(self , trainX , trainY , testX , 
-                testY , batchSize , model_path , 
-                loss , metrics , lr, optim = tf.keras.optimizers.SGD()):
+                testY , batchSize , model , 
+                loss , metrics , lr, optim = tf.keras.optimizers.legacy.SGD()):
 
-    self.model = load_model(model_path)
+    self.model = model
     self.c = self.initializeC()
     self.cPlus = self.initializeC()
     self.trainX = trainX
@@ -72,19 +71,20 @@ class ClientScaffold:
 
 class ClientFedAvg:
   def __init__(self , trainX , trainY , testX , 
-                testY , batchSize , model_path , 
-                 loss , metrics , lr , optim  = SGD()):
+                testY , batchSize , model , 
+                 loss , metrics , lr , optim  = tf.keras.optimizers.legacy.SGD(1)):
 
-    self.model = load_model(model_path)
+    self.model = model
     self.trainX = trainX
     self.trainY = trainY
     self.testX = testX
     self.testY = testY
     self.batch = batchSize
-    self.lr = optim.learning_rate
+    self.lr = float(lr)
     self.losses = loss
     self.metrics = metrics
     self.optim  = optim
+    self.optim.learning_rate = self.lr
   def train(self , C , Global , epoch = 5):
     self.model.compile(optimizer = self.optim , loss = self.loss , metrics = self.metrics)
     self.model.set_weights(Global)

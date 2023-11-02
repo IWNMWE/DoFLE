@@ -35,12 +35,6 @@ class FederatedLearningComponent():
         #The string contaning the method name
         self.method = method
 
-        #global control variate
-        if self.method == "scaffold" or self.method == "SCAFFOLD":
-            self.global_C = self.global_model[0]["weights"]
-            for i in self.global_c:
-                i.fill(0)
-
         #Global learning rate of the server 
         self.global_lr = global_lr
 
@@ -105,7 +99,9 @@ class FederatedLearningComponent():
             if (len(self.selected_clients) ==
                 len(self.client_models)):
                 self.flMode = FLMode.AGGREGATING
-        
+                self.server_train()
+                self.flMode = FLMode.WAITING_FOR_SELECTED_CLIENTS
+
         if self.flMode == FLMode.WAITING_FOR_SELECTED_CLIENTS:
             if (len(self.selected_clients) ==
                 len(self.selected_clients_with_model)):
@@ -117,7 +113,7 @@ class FederatedLearningComponent():
                 self.flMode = FLMode.WAITING_FOR_MODELS
 
     def update_global(self, global_weights, delta_weights,
-                     nk, delta_c):
+                     nk, global_C,delta_c):
         """Performs the global updates to the global model [global_weights] 
            and all the required parameters [C_global] based on the federated 
            learning algorithm used       
@@ -140,7 +136,7 @@ class FederatedLearningComponent():
                     global_weights[i] = (global_weights[i] 
                                         + (delta_weights[i] 
                                         * (self.global_lr * nk[ind]/float(total_datapoints))))
-                    self.global_C[i] = (self.global_C[i] 
+                    global_C[i] = (global_C[i] 
                                 + (delta_c[i] * (nk[ind]/float(total_datapoints))) 
                                 * (len(delta_weight) / float(len(self.clients))))
                 
@@ -172,6 +168,6 @@ class FederatedLearningComponent():
                 model_dict = storage.retrieve(model['model_key'])
                 delta_c.append(model_dict['weights'])
 
-        self.update_global(self.global_weights[-1]['weights'], delta_weights,
-                     nk, delta_c)
+        self.update_global(storage.retrieve(self.global_weights[-1]['model_key']), delta_weights,
+                     nk,storage.retrieve(self.global_weights[-1]['global_C_key']),delta_c)
            

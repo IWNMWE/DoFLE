@@ -2,8 +2,28 @@
 import requests
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.datasets import mnist
+import Fed_algo
 import os
 import time
+
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Flatten
+
+def make_model():
+ model = Sequential()
+ model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', input_shape=(28, 28, 1)))
+ model.add(MaxPooling2D((2, 2)))
+ model.add(Flatten())
+ model.add(Dense(100, activation='relu', kernel_initializer='he_uniform'))
+ model.add(Dense(10, activation='softmax'))
+
+ return model
+
 
 # Base URL of the central server and URLs of all endpoints
 baseUrl = "http://server:8000"
@@ -14,8 +34,37 @@ getGlobalModelUrl = "/get_global_model"
 
 POLL_INTERVAL = 60
 
+
+def load_dataset():
+ # load dataset
+ (trainX, trainY), (testX, testY) = mnist.load_data()
+ # reshape dataset to have a single channel
+ trainX = trainX.reshape((trainX.shape[0], 28, 28, 1))
+ testX = testX.reshape((testX.shape[0], 28, 28, 1))
+ # one hot encode target values
+ trainY = to_categorical(trainY)
+ testY = to_categorical(testY)
+
+random_indices = np.random.choice(len(trainX), 10016, replace=False)
+
+# Select the subset of data and labels
+subset_X = trainX[random_indices]
+subset_Y = trainY[random_indices]
+ return subset_X, subset_Y, testX, testY
+
+
+def prep_pixels(train, test):
+ # convert from integers to floats
+ train_norm = train.astype('float32')
+ test_norm = test.astype('float32')
+ # normalize to range 0-1
+ train_norm = train_norm / 255.0
+ test_norm = test_norm / 255.0
+ # return normalized images
+ return train_norm, test_norm
+
 class Client:
-    def __init__(self, name=None, modelFile=None, dataFolder=None) -> None:
+    def __init__(self, name=None, modelFile=None, dataFolder=None , lr = 0.01) -> None:
         # A string identifer for this particular client, defaults to
         # the Hostname
         self.name = name
@@ -32,12 +81,21 @@ class Client:
         # A directory containing the training data set
         self.dataFolder = dataFolder
 
-        # Number of datapoints the client model has been trained upon
-        self.datapoints = 0
-
         # An identifier representing the version of the model with the
         # client with respect to the Federated Learning process
         self.version = None
+
+        self.trainX, self.trainY, self.testX, self.testY = load_dataset()
+        # prepare pixel data
+        self.trainX, self.testX = prep_pixels(self.trainX, self.testX)
+        self.baseClient = ClientScaffold(self.trainX , self.trainY , self.testX , 
+                self.testY , 32 , make_model() , 
+                tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                 , [tf.keras.metrics.CategoricalAccuracy()] 
+                 ,lr, optim = tf.keras.optimizers.legacy.SGD(learning_rate = lr))
+        
+        # Number of datapoints the client model has been trained upon
+        self.datapoints = len(self.trainX)
 
     def loadModel(self, modelFile=None):
         """Loads a model from the [modelFile]. If it is not provided,
@@ -163,6 +221,7 @@ class Client:
                     else:
                         # Stop polling
                         globalModel = response.json()["model"]
+                        self.version = globalModel["version"]
                         return False
                 else:
                     print("Response error: " +
@@ -180,9 +239,13 @@ class Client:
 
         # Got global model, start training
         if globalModel is not None:
-            pass
+            C = globalModel["globalC"]
+            Global = globalModel["weigths"]
+            [delta_weights,delta_C,n] = self.baseClient.train(C , Global)
+            self.sendModelUpdates(delta_C,delta_weights,n)
+            self.pollForGlobalModel()
         
-    def sendModelUpdates(self, modelFile = None,model = None):
+    def sendModelUpdates(self, delta_C = None,delta_weights = None,datapoints = None ):
         """Sends the [model] updates to the server. If the [model] is
            not provided, it uses [modelFile] and client's implementation
            of loading model to get the model.
@@ -194,15 +257,16 @@ class Client:
 
         url = baseUrl + sendModelUrl
         try:
-            if model == None:
-                model = self.loadModel(modelFile = modelFile)
+            ##if model == None:
+            ##    model = self.loadModel(modelFile = modelFile)
 
-            weights = model.get_weights().tolist()
+            # weights = model.get_weights().tolist()
             response = requests.post(url, json={
                 "id": self.id,
                 "version": self.version,
-                "weights": weights,
-                "datapoints": self.datapoints
+                "delta_weights": delta_weights,
+                "delta_C": delta_C,
+                "datapoints":datapoints
             })
 
             if response.status_code == 204:
@@ -217,9 +281,6 @@ class Client:
 
 # Entry point
 if __name__ == '__main__':
-    # client = Client(modelFile="x.h5", dataFolder="test")
-    # client.train()
-    # client.subscribeToFL()
-    # client.pollForStatus()
-    while True:
-        pass
+    client = Client(modelFile="x.h5", dataFolder="test")
+    client.subscribeToFL()
+    client.pollForGlobalModel()
