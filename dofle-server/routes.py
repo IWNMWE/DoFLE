@@ -75,7 +75,8 @@ def receiveModelUpdates():
                 return MODEL_ALREADY_RECEIVED
             
             model = {
-                "weights": request.json["weights"],
+                "delta_weights": request.json["delta_weights"],
+                "delta_C": request.json["delta_C"],
                 "datapoints": request.json["datapoints"],
             }
             model_key = storage.store("c", model)
@@ -156,9 +157,13 @@ def getGlobalModel():
                     return {"status": msg}, code
 
                 modelWeights = storage.retrieve(fed.global_models[-1]["model_key"])
+                globalC = storage.retrieve(fed.global_models[-1]["global_C_key"])
 
-                model = fed.global_models[-1].copy()
-                model["weights"] = modelWeights
+                model = {
+                    "version": fed.global_models[-1]["version"],
+                    "weights": modelWeights,
+                    "globalC": globalC
+                }
 
                 if id not in fed.selected_clients_with_model:
                     fed.selected_clients_with_model.append(id)
