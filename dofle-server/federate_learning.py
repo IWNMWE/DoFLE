@@ -4,7 +4,9 @@ from __main__ import storage
 import models
 
 CLIENT_BATCH_SIZE = 5
-
+trainX, trainY, testX, testY = models.load_dataset()
+# prepare pixel data
+trainX, testX = models.prep_pixels(trainX, testX)
 class FLMode(Enum):
     WAITING_FOR_SELECTED_CLIENTS = 1
     AGGREGATING = 2
@@ -98,8 +100,14 @@ class FederatedLearningComponent():
             if (len(self.selected_clients) ==
                 len(self.client_models.keys())):
                 self.flMode = FLMode.AGGREGATING
-                gw, gC = self.server_train()
-                    
+                gw , gC = self.server_train()
+                model = models.load_model()
+                model.set_weights(gw)
+                model.compile(optimizer = tf.keras.optimizers.SGD(),loss  = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                 , metrics  = [tf.keras.metrics.CategoricalAccuracy()])
+                
+                print("Global:",model.evaluate(testX, testY),"\n")
+                
                 key = storage.store("w", models.arrayToList(gw))
                 key_dash = storage.store("c",models.arrayToList(gC))
 
@@ -178,8 +186,8 @@ class FederatedLearningComponent():
             if self.method == "scaffold" or self.method == "SCAFFOLD":
                 delta_c.append(models.listToArray(model_dict['delta_C']))
 
-        weights = models.listToArray(storage.retrieve(self.global_models[-1]['model_key']))
-        globalC = models.listToArray(storage.retrieve(self.global_models[-1]['global_C_key']))
+        weights = models.listToArray(storage.retrieve(self.global_weights[-1]['model_key']))
+        globalC = models.listToArray(storage.retrieve(self.global_weights[-1]['global_C_key']))
         return self.update_global(weights, delta_weights,
                      nk,globalC,delta_c)
            
