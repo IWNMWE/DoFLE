@@ -98,7 +98,7 @@ class FederatedLearningComponent():
                 [gw , gC] = self.server_train()
                 key = storage.store("w",gw)
                 key_dash = storage.store("c",gC)
-                fed.global_models.append({
+                self.global_models.append({
                     "version" :  self.global_weights[-1]['version'] + 1, 
                     "model_key" : key,
                     "global_C_key"  : key_dash
