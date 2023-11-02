@@ -163,14 +163,14 @@ class FederatedLearningComponent():
         delta_c = []     
         for _, model in self.client_models:
            model_dict = storage.retrieve(model['model_key'])
-           delta_weights.append(model_dict['weights'])
+           delta_weights.append(models.convert_tond(model_dict['delta_weights']))
            nk.append(model_dict["datapoints"])
         
         if self.method == "scaffold" or self.method == "SCAFFOLD":
             for _, model in self.client_models:
                 model_dict = storage.retrieve(model['model_key'])
-                delta_c.append(model_dict['weights'])
+                delta_c.append(models.convert_tond(model_dict['delta_C']))
 
-        self.update_global(storage.retrieve(self.global_weights[-1]['model_key']), delta_weights,
-                     nk,storage.retrieve(self.global_weights[-1]['global_C_key']),delta_c)
+        self.update_global(models.convert_tond(storage.retrieve(self.global_weights[-1]['model_key'])), delta_weights,
+                     nk,models.convert_tond(storage.retrieve(self.global_weights[-1]['global_C_key'])),delta_c)
            
