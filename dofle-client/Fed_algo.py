@@ -98,3 +98,14 @@ class ClientFedAvg:
         delta_weights[i] -=  Global[i]
     
     return [delta_weights,len(self.trainX)]
+
+
+def convert_tolist(C):
+  for i in range(0 , len(C)):
+    C[i] = C[i].tolist()
+  return c
+
+def convert_tond(C):
+  for i in range (0,len(C)):
+    C[i] = np.asarray(C[i] , dtype='float32')
+  return C

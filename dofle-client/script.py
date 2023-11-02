@@ -239,8 +239,8 @@ class Client:
 
         # Got global model, start training
         if globalModel is not None:
-            C = globalModel["globalC"]
-            Global = globalModel["weigths"]
+            C = Fed_algo.convert_tond(globalModel["globalC"])
+            Global = Fed_algo.convert_tond(globalModel["weigths"])
             [delta_weights,delta_C,n] = self.baseClient.train(C , Global)
             self.sendModelUpdates(delta_C,delta_weights,n)
             self.pollForGlobalModel()
@@ -261,6 +261,8 @@ class Client:
             ##    model = self.loadModel(modelFile = modelFile)
 
             # weights = model.get_weights().tolist()
+            delta_C = Fed_algo.convert_tolist(delta_C)
+            delta_weights = Fed_algo.convert_tolist(delta_weights)
             response = requests.post(url, json={
                 "id": self.id,
                 "version": self.version,
