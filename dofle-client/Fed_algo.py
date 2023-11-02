@@ -15,7 +15,7 @@ Currently supported methods :
 class ClientScaffold:
   def __init__(self , trainX , trainY , testX , 
                 testY , batchSize , model_path , 
-                optim , loss , metrics , lr):
+                loss , metrics , lr, optim = tf.keras.optimizers.SGD()):
 
     self.model = load_model(model_path)
     self.c = self.initializeC()
@@ -25,10 +25,11 @@ class ClientScaffold:
     self.testX = testX
     self.testY = testY
     self.batch = batchSize
-    self.lr = optim.learning_rate
+    self.lr = float(lr)
     self.losses = loss
     self.metrics = metrics
     self.optim  = optim
+    self.optim.learning_rate = self.lr
   def train(self , C , Global):
     self.model.compile(optimizer = self.optim , loss = self.losses , metrics = self.metrics)
     self.model.set_weights(Global)
@@ -72,7 +73,7 @@ class ClientScaffold:
 class ClientFedAvg:
   def __init__(self , trainX , trainY , testX , 
                 testY , batchSize , model_path , 
-                optim , loss , metrics , lr):
+                 loss , metrics , lr , optim  = SGD()):
 
     self.model = load_model(model_path)
     self.trainX = trainX

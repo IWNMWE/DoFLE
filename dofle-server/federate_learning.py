@@ -1,6 +1,6 @@
 # Federated Learning script
 from enum import Enum
-
+from __main__ import storage
 CLIENT_BATCH_SIZE = 5
 
 class FLMode(Enum):
@@ -9,7 +9,7 @@ class FLMode(Enum):
     WAITING_FOR_MODELS = 3 
 
 class FederatedLearningComponent():
-    def __init__(self) -> None:
+    def __init__(self , method , global_lr) -> None:
         # List of subsribed client ids
         self.clients = []
 
@@ -32,6 +32,22 @@ class FederatedLearningComponent():
         # Mode the federated learning system is in
         self.flMode = FLMode.WAITING_FOR_SELECTED_CLIENTS
 
+        #The string contaning the method name
+        self.method = method
+
+        #global control variate
+        if(self.method == "scaffold" or self.method = "SCAFFOLD"):
+            self.global_C = self.global_model[0]["weights"]
+            for i in self.global_c:
+                i.fill(0)
+
+        #Global learning rate of the server 
+        self.global_lr = global_lr
+
+        # Map of client ids that map to model updates
+        # sent from selected clients
+        self.delta_c = {}
+   
     def selectClientsForRound(clients, prevSelection=None):
         """Selects [CLIENT_BATCH_SIZE] number of clients from the [clients]
         list in a round robin manner by starting from the element next of
@@ -100,13 +116,16 @@ class FederatedLearningComponent():
                 )
                 self.flMode = FLMode.WAITING_FOR_MODELS
 
-    def update_global(self, global_lr, global_weights, delta_weights, nk, global_C, delta_c = [0], method = "AVG"):
-        """Performs the global updates to the global model [global_weights] and all the 
-           the required parameters [C_global] based on the federated learning algorithm used       
+    def update_global(self, global_weights, delta_weights,
+                     nk, delta_c):
+        """Performs the global updates to the global model [global_weights] 
+           and all the required parameters [C_global] based on the federated 
+           learning algorithm used       
         
            Returns : 
                 global_model : The weights of the global model.
-                global_C     : The global control variate.(optional depending on the algorithm)
+                global_C     : The global control variate.
+                              (optional depending on the algorithm)
         """
         ind = 0
 
@@ -114,19 +133,45 @@ class FederatedLearningComponent():
         for n in nk:
             total_datapoints = total_datapoints + 1
         
-        if(method == "scaffold" or method == "SCAFFOLD"): 
+        if(self.method == "scaffold" or self.method == "SCAFFOLD"):
+
             for delta_weight in delta_weights:
                 for i in range(0, len(global_weights)):
-                    global_weights[i] = global_weights[i] + (delta_weights[i] * (global_lr * nk[ind]/float(total_datapoints)))
-                    global_C[i] = global_C[i] + (delta_c[i] * (nk[ind]/float(total_datapoints))) * (len(delta_weight) / float(len(self.clients)))
+                    global_weights[i] = global_weights[i] 
+                                        + (delta_weights[i] 
+                                        * (self.global_lr * nk[ind]/float(total_datapoints)))
+                    self.global_C[i] = self.global_C[i] 
+                                + (delta_c[i] * (nk[ind]/float(total_datapoints))) 
+                                * (len(delta_weight) / float(len(self.clients)))
+                
                 ind = ind + 1
                 
             return [global_weights,global_C]
         
-        if(method == "avg" or method == "AVG"): 
+        if(self.method == "avg" or self.method == "AVG"): 
             for delta_weight in delta_weights:
                 for i in range(0, len(global_weights)):
-                    global_weights[i] = global_weights[i] + (delta_weights[i] * (global_lr * nk[ind]/float(total_datapoints)))
+                    global_weights[i] = global_weights[i] 
+                    + (delta_weights[i] * (self.global_lr * nk[ind]/float(total_datapoints)))
+                
                 ind = ind + 1
 
             return [global_weights]
+
+    def server_train(self):
+        delta_weights = []
+        nk = []
+        delta_c = []     
+        for _, model in self.client_models:
+           model_dict = storage.retrieve(model['model_key'])
+           delta_weights.append(model_dict['weights'])
+           nk.append(model_dict["datapoints"])
+        
+        if(self.method == "scaffold" or self.method = "SCAFFOLD"):
+            for _, model in self.client_models:
+                model_dict = storage.retrieve(model['model_key'])
+                delta_c.append(model_dict['weights'])
+
+        self.update_global(self.global_weights[-1]['weights'], delta_weights,
+                     nk, delta_c)
+           

@@ -12,7 +12,9 @@ app = Flask(__name__)
 
 # Import federated learning functionalities
 from federate_learning import FederatedLearningComponent
-fed = FederatedLearningComponent()
+fed = FederatedLearningComponent("scaffold")
+
+
 
 # Import the server routes
 import routes
