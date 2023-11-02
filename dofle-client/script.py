@@ -3,13 +3,16 @@ import requests
 import numpy as np
 import tensorflow as tf
 import os
-
+import time
 
 # Base URL of the central server and URLs of all endpoints
 baseUrl = "http://server:8000"
 subscribeUrl = "/subscribe"
 sendModelUrl = "/model_updates"
-getFLStatusUrl = "/fl_process_status"
+getGlobalModelUrl = "/get_global_model"
+
+
+POLL_INTERVAL = 60
 
 class Client:
     def __init__(self, name=None, modelFile=None, dataFolder=None) -> None:
@@ -135,32 +138,49 @@ class Client:
         except Exception as exp:
             print("Request exception: " + str(exp))
 
-    def pollForStatus(self):
-        """Gets the status of the client with respect to the FL process.
-           If the client is not selected, it polls again. If the client
-           is selected, the client can start training the model.
+    def pollForGlobalModel(self):
+        """Polls the server until it gets the global model. If the client
+           is not selected, it polls again. If the client is selected,
+           the client can start training the model.
         """
 
-        url = baseUrl + getFLStatusUrl
-        try:
-            response = requests.get(url, json={
-                "id": self.id
-            })
+        url = baseUrl + getGlobalModelUrl
+        keepPolling = True
+        globalModel = None
 
-            if response.status_code == 200:
-                status = response.json()["status"]
-                print(status)
-                if "not" in status:
-                    # Poll again after sometime later
-                    pass
+        def getModel():
+            try:
+                response = requests.get(url, json={
+                    "id": self.id
+                })
+
+                if response.status_code == 200:
+                    status = response.json()["status"]
+                    print(status)
+                    if "not" in status:
+                        # Poll again after sometime later
+                        return True
+                    else:
+                        # Stop polling
+                        globalModel = response.json()["model"]
+                        return False
                 else:
-                    # Start training
-                    pass
-            else:
-                print("Response error: " +
-                      str(response.status_code) + ":" + response.text)
-        except Exception as exp:
-            print("Failed to get FL status: " + str(exp))
+                    print("Response error: " +
+                        str(response.status_code) + ":" + response.text)
+            except Exception as exp:
+                print("Failed to get FL status: " + str(exp))
+            
+            return True
+
+        while keepPolling == True:
+            keepPolling = getModel()
+            if keepPolling == True:
+                # Wait for [POLL_INTERVAL] time
+                time.sleep(POLL_INTERVAL)
+
+        # Got global model, start training
+        if globalModel is not None:
+            pass
         
     def sendModelUpdates(self, modelFile = None,model = None):
         """Sends the [model] updates to the server. If the [model] is

@@ -132,6 +132,7 @@ def getGlobalModel():
         id: The id of the client assigned by the FL system
 
     Returns:
+        status: The status of the client wrt the FL process
         version: The version of the global model
         weights: The weight matrix of the model (as a list)
     """
@@ -145,12 +146,14 @@ def getGlobalModel():
                     return CLIENT_NOT_REGISTERED
 
                 if id not in fed.selected_clients:
-                    return CLIENT_NOT_SELECTED
+                    msg, code = CLIENT_NOT_SELECTED
+                    return {"status": msg}, code
 
                 if (fed.flMode == FLMode.AGGREGATING or
                     fed.flMode == FLMode.WAITING_FOR_MODELS or
                     fed.global_models):
-                    return MODEL_NOT_TRAINED
+                    msg, code = MODEL_NOT_TRAINED
+                    return {"status": msg}, code
 
                 modelWeights = storage.retrieve(fed.global_models[-1]["model_key"])
 
@@ -161,7 +164,8 @@ def getGlobalModel():
                     fed.selected_clients_with_model.append(id)
                     fed.changeMode()
 
-                return model, 200
+                msg, _ = CLIENT_SELECTED
+                return {"status": msg, "model": model}, 200
             except:
                 return INTERNAL_SERVER_ERROR
         except:
