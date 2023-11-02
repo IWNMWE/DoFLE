@@ -75,7 +75,7 @@ def receiveModelUpdates():
                 return MODEL_ALREADY_RECEIVED
             
             model = {
-                "weights": np.asarray(request.json["weights"]),
+                "weights": request.json["weights"],
                 "datapoints": request.json["datapoints"],
             }
             model_key = storage.store("c", model)
@@ -153,7 +153,6 @@ def getGlobalModel():
                     return MODEL_NOT_TRAINED
 
                 modelWeights = storage.retrieve(fed.global_models[-1]["model_key"])
-                modelWeights = modelWeights.tolist()
 
                 model = fed.global_models[-1].copy()
                 model["weights"] = modelWeights
