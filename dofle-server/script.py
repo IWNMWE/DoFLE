@@ -26,27 +26,23 @@ import routes
 if __name__ == '__main__':
 
     global_C = models.load_model()
-    weights_stream = io.BytesIO()
-    global_C.save_weights(weights_stream)
-    
-    key = storage.store("w",weights_stream.getvalue().decode('utf-8'))
-   
+
+    weights = models.arrayToList(global_C.get_weights())
+    key = storage.store("w", weights)
+
     temp = global_C.get_weights()
     for i in temp:
         i.fill(0)
-    global_C.set_weights(temp)
-    weights_stream.seek(0)
-    weights_stream.truncate()
-    global_C.save_weights(weights_stream)
-    
-    key_dash = storage.store("c",weights_stream.getvalue().decode('utf-8'))
+
+    temp = models.arrayToList(temp)
+    key_dash = storage.store("w", temp)
 
     fed.global_models.append({
         "version" : 1, 
         "model_key" : key,
         "global_C_key"  : key_dash
     })
-    fed.selected_clients = fed.selectClientsForRound(fed.clients,fed.selected_clients)
+    fed.selected_clients = fed.selectClientsForRound(fed.clients,prevSelection=fed.selected_clients)
 
     app.run(host='0.0.0.0', port=8000)
     while True:

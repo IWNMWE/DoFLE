@@ -3,6 +3,7 @@ import redis
 import uuid
 import numpy as np
 import json
+import copy
 
 
 class Storage:
@@ -25,7 +26,7 @@ class Storage:
         """
         key = prefix + str(uuid.uuid4())
 
-        json_model = model.copy()
+        json_model = copy.deepcopy(model)
         json_dumps = json.dumps(json_model)
 
         self._db.set(key, json_dumps)

@@ -1,6 +1,8 @@
 # Federated Learning script
 from enum import Enum
 from __main__ import storage
+import models
+
 CLIENT_BATCH_SIZE = 5
 
 class FLMode(Enum):
@@ -38,7 +40,7 @@ class FederatedLearningComponent():
         #Global learning rate of the server 
         self.global_lr = global_lr
    
-    def selectClientsForRound(clients, prevSelection=None):
+    def selectClientsForRound(self, clients, prevSelection=None):
         """Selects [CLIENT_BATCH_SIZE] number of clients from the [clients]
         list in a round robin manner by starting from the element next of
         the last element of [prevSelection].
@@ -97,21 +99,11 @@ class FederatedLearningComponent():
                 self.flMode = FLMode.AGGREGATING
                 [gw , gC] = self.server_train()
 
-                global_C = models.load_model()
-                global_C.set_weights(gw)
-                weights_stream = io.BytesIO()
-                global_C.save_weights(weights_stream)
+                
+                key = storage.store("w", models.arrayToList(gw))
+                key_dash = storage.store("c",models.arrayToList(gC))
 
-                key = storage.store("w",weights_stream.getvalue().decode('utf-8'))
-
-                global_C.set_weights(gC)
-                weights_stream.seek(0)
-                weights_stream.truncate()
-                global_C.save_weights(weights_stream)
-
-                key_dash = storage.store("c",weights_stream.getvalue().decode('utf-8'))
-
-                fed.global_models.append({
+                self.global_models.append({
                     "version" :  self.global_weights[-1]['version'] + 1, 
                     "model_key" : key,
                     "global_C_key"  : key_dash
@@ -176,26 +168,16 @@ class FederatedLearningComponent():
         delta_c = []     
         for _, model in self.client_models:
            model_dict = storage.retrieve(model['model_key'])
-
-           stream = model_dict['delta_weights'].encode('utf-8')
-           weights_stream = io.BytesIO(stream)
-           temp_model = models.load_model()
-           temp_model.load_weights(weights_stream)
-           delta_weights.append(temp_model.get_weights())
+           
+           delta_weights.append(models.listToArray(model_dict['delta_weights']))
            nk.append(model_dict["datapoints"])
         
         if self.method == "scaffold" or self.method == "SCAFFOLD":
             for _, model in self.client_models:
-                model_dict = storage.retrieve(model['model_key'])
-                stream = model_dict['delta_C'].encode('utf-8')
-                weights_stream = io.BytesIO(stream)
-                temp_model = models.load_model()
-                temp_model.load_weights(weights_stream)
-                
-                delta_c.append(temp_model.get_weights())
+                delta_c.append(models.listToArray(model_dict['delta_C']))
 
-        
-
-        self.update_global(storage.retrieve(self.global_weights[-1]['model_key']), delta_weights,
-                     nk,storage.retrieve(self.global_weights[-1]['global_C_key']),delta_c)
+        weights = models.listToArray(storage.retrieve(self.global_weights[-1]['model_key']))
+        globalC = models.listToArray(storage.retrieve(self.global_weights[-1]['global_C_key']))
+        return self.update_global(weights, delta_weights,
+                     nk,globalC,delta_c)
            

@@ -40,3 +40,17 @@ def prep_pixels(train, test):
  test_norm = test_norm / 255.0
  # return normalized images
  return train_norm, test_norm
+
+def arrayToList(array: np.ndarray):
+    new = array.copy()
+    for i in range(0,len(new)):
+        new[i] = new[i].tolist()
+    
+    return new
+
+def listToArray(l: list):
+    new = l.copy()
+    for i in range(0,len(new)):
+        new[i] = np.asarray(new[i],  dtype='float32')
+    
+    return new
