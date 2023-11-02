@@ -96,8 +96,21 @@ class FederatedLearningComponent():
                 len(self.client_models)):
                 self.flMode = FLMode.AGGREGATING
                 [gw , gC] = self.server_train()
-                key = storage.store("w",gw)
-                key_dash = storage.store("c",gC)
+
+                global_C = models.load_model()
+                global_C.set_weights(gw)
+                weights_stream = io.BytesIO()
+                global_C.save_weights(weights_stream)
+
+                key = storage.store("w",weights_stream.getvalue().decode('utf-8'))
+
+                global_C.set_weights(gC)
+                weights_stream.seek(0)
+                weights_stream.truncate()
+                global_C.save_weights(weights_stream)
+
+                key_dash = storage.store("c",weights_stream.getvalue().decode('utf-8'))
+
                 fed.global_models.append({
                     "version" :  self.global_weights[-1]['version'] + 1, 
                     "model_key" : key,
@@ -163,13 +176,25 @@ class FederatedLearningComponent():
         delta_c = []     
         for _, model in self.client_models:
            model_dict = storage.retrieve(model['model_key'])
-           delta_weights.append(model_dict['dela_weights'])
+
+           stream = model_dict['delta_weights'].encode('utf-8')
+           weights_stream = io.BytesIO(stream)
+           temp_model = models.load_model()
+           temp_model.load_weights(weights_stream)
+           delta_weights.append(temp_model.get_weights())
            nk.append(model_dict["datapoints"])
         
         if self.method == "scaffold" or self.method == "SCAFFOLD":
             for _, model in self.client_models:
                 model_dict = storage.retrieve(model['model_key'])
-                delta_c.append(model_dict['delta_C'])
+                stream = model_dict['delta_C'].encode('utf-8')
+                weights_stream = io.BytesIO(stream)
+                temp_model = models.load_model()
+                temp_model.load_weights(weights_stream)
+                
+                delta_c.append(temp_model.get_weights())
+
+        
 
         self.update_global(storage.retrieve(self.global_weights[-1]['model_key']), delta_weights,
                      nk,storage.retrieve(self.global_weights[-1]['global_C_key']),delta_c)

@@ -4,6 +4,7 @@ import numpy as np
 import asyncio
 import tensorflow as tf
 import models
+import io
 
 # Import storage class
 from storage import Storage
@@ -24,11 +25,22 @@ import routes
 # Entry point
 if __name__ == '__main__':
 
-    global_C = models.load_model().get_weights()
-    key = storage.store("w",global_C)
-    for i in global_C:
+    global_C = models.load_model()
+    weights_stream = io.BytesIO()
+    global_C.save_weights(weights_stream)
+    
+    key = storage.store("w",weights_stream.getvalue().decode('utf-8'))
+   
+    temp = global_C.get_weights()
+    for i in temp:
         i.fill(0)
-    key_dash = storage.store("c",global_C)
+    global_C.set_weights(temp)
+    weights_stream.seek(0)
+    weights_stream.truncate()
+    global_C.save_weights(weights_stream)
+    
+    key_dash = storage.store("c",weights_stream.getvalue().decode('utf-8'))
+
     fed.global_models.append({
         "version" : 1, 
         "model_key" : key,
