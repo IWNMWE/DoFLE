@@ -99,3 +99,34 @@ class FederatedLearningComponent():
                     prevSelection=self.selected_clients
                 )
                 self.flMode = FLMode.WAITING_FOR_MODELS
+
+    def update_global(self, global_lr, global_weights, delta_weights, nk, global_C, delta_c = [0], method = "AVG"):
+        """Performs the global updates to the global model [global_weights] and all the 
+           the required parameters [C_global] based on the federated learning algorithm used       
+        
+           Returns : 
+                global_model : The weights of the global model.
+                global_C     : The global control variate.(optional depending on the algorithm)
+        """
+        ind = 0
+
+        total_datapoints = 0
+        for n in nk:
+            total_datapoints = total_datapoints + 1
+        
+        if(method == "scaffold" or method == "SCAFFOLD"): 
+            for delta_weight in delta_weights:
+                for i in range(0, len(global_weights)):
+                    global_weights[i] = global_weights[i] + (delta_weights[i] * (global_lr * nk[ind]/float(total_datapoints)))
+                    global_C[i] = global_C[i] + (delta_c[i] * (nk[ind]/float(total_datapoints))) * (len(delta_weight) / float(len(self.clients)))
+                ind = ind + 1
+                
+            return [global_weights,global_C]
+        
+        if(method == "avg" or method == "AVG"): 
+            for delta_weight in delta_weights:
+                for i in range(0, len(global_weights)):
+                    global_weights[i] = global_weights[i] + (delta_weights[i] * (global_lr * nk[ind]/float(total_datapoints)))
+                ind = ind + 1
+
+            return [global_weights]
