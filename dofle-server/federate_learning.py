@@ -36,7 +36,7 @@ class FederatedLearningComponent():
         self.method = method
 
         #global control variate
-        if(self.method == "scaffold" or self.method = "SCAFFOLD"):
+        if self.method == "scaffold" or self.method == "SCAFFOLD":
             self.global_C = self.global_model[0]["weights"]
             for i in self.global_c:
                 i.fill(0)
@@ -137,12 +137,12 @@ class FederatedLearningComponent():
 
             for delta_weight in delta_weights:
                 for i in range(0, len(global_weights)):
-                    global_weights[i] = global_weights[i] 
+                    global_weights[i] = (global_weights[i] 
                                         + (delta_weights[i] 
-                                        * (self.global_lr * nk[ind]/float(total_datapoints)))
-                    self.global_C[i] = self.global_C[i] 
+                                        * (self.global_lr * nk[ind]/float(total_datapoints))))
+                    self.global_C[i] = (self.global_C[i] 
                                 + (delta_c[i] * (nk[ind]/float(total_datapoints))) 
-                                * (len(delta_weight) / float(len(self.clients)))
+                                * (len(delta_weight) / float(len(self.clients))))
                 
                 ind = ind + 1
                 
@@ -167,7 +167,7 @@ class FederatedLearningComponent():
            delta_weights.append(model_dict['weights'])
            nk.append(model_dict["datapoints"])
         
-        if(self.method == "scaffold" or self.method = "SCAFFOLD"):
+        if self.method == "scaffold" or self.method == "SCAFFOLD":
             for _, model in self.client_models:
                 model_dict = storage.retrieve(model['model_key'])
                 delta_c.append(model_dict['weights'])
