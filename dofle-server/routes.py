@@ -41,6 +41,7 @@ def subscribe():
                 "name": name
             }
             fed.clients.append(client)
+            fed.shouldSelectClient()
             
             return {
                 "client": client,
@@ -69,7 +70,7 @@ def receiveModelUpdates():
             
             if id not in fed.selected_clients:
                 msg, _ = CLIENT_NOT_SELECTED
-                return msg, 403
+                return msg + str(id), 403
             
             if id in fed.client_models.keys():
                 return MODEL_ALREADY_RECEIVED
@@ -84,10 +85,12 @@ def receiveModelUpdates():
                 "version": request.json["version"],
                 "model_key": model_key
             }
+            print("Keys = ", fed.client_models.keys())
             fed.changeMode()
 
             return NO_CONTENT
-        except:
+        except Exception as e:
+            print(str(e))
             return UNPROCESSABLE_ENTITY
     else:
         return INVALID_REQUEST
@@ -152,6 +155,7 @@ def getGlobalModel():
 
                 if (fed.flMode == FLMode.AGGREGATING or
                     fed.flMode == FLMode.WAITING_FOR_MODELS or
+                    id in fed.client_models.keys() or
                     len(fed.global_models) == 0):
                     msg, code = MODEL_NOT_TRAINED
                     return {"status": msg}, code
@@ -171,9 +175,11 @@ def getGlobalModel():
 
                 msg, _ = CLIENT_SELECTED
                 return {"status": msg, "model": model}, 200
-            except:
+            except Exception as e:
+                print(str(e))
                 return INTERNAL_SERVER_ERROR
-        except:
+        except Exception as e:
+            print(str(e))
             return UNPROCESSABLE_ENTITY
     else:
         return INVALID_REQUEST

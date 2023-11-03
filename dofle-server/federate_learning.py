@@ -2,8 +2,9 @@
 from enum import Enum
 from __main__ import storage
 import models
+import tensorflow as tf
 
-CLIENT_BATCH_SIZE = 5
+CLIENT_BATCH_SIZE = 2
 trainX, trainY, testX, testY = models.load_dataset()
 # prepare pixel data
 trainX, testX = models.prep_pixels(trainX, testX)
@@ -80,6 +81,7 @@ class FederatedLearningComponent():
             selected_clients.append(clients[i])
             i += 1
         
+        print("Selected Clients: ", selected_clients)
         return selected_clients
 
     def clientsToIds(self):
@@ -117,6 +119,10 @@ class FederatedLearningComponent():
                     "global_C_key"  : key_dash
                 })
                 self.client_models = {}
+                self.selected_clients = self.selectClientsForRound(
+                    self.clientsToIds(),
+                    prevSelection=self.selected_clients
+                )
                 self.flMode = FLMode.WAITING_FOR_SELECTED_CLIENTS
                 print("Server mode: ", self.flMode.name)
 
@@ -124,12 +130,13 @@ class FederatedLearningComponent():
             if (len(self.selected_clients) ==
                 len(self.selected_clients_with_model)):
                 self.selected_clients_with_model = []
-                self.selected_clients = self.selectClientsForRound(
-                    self.clientsToIds(),
-                    prevSelection=self.selected_clients
-                )
                 self.flMode = FLMode.WAITING_FOR_MODELS
                 print("Server mode: ", self.flMode.name)
+
+    def shouldSelectClient(self):
+        if len(self.clients) == 3:
+            self.selected_clients = self.selectClientsForRound(
+                self.clientsToIds(),prevSelection=self.selected_clients)
 
     def update_global(self, global_weights, delta_weights,
                      nk, global_C,delta_c):
@@ -186,8 +193,8 @@ class FederatedLearningComponent():
             if self.method == "scaffold" or self.method == "SCAFFOLD":
                 delta_c.append(models.listToArray(model_dict['delta_C']))
 
-        weights = models.listToArray(storage.retrieve(self.global_weights[-1]['model_key']))
-        globalC = models.listToArray(storage.retrieve(self.global_weights[-1]['global_C_key']))
+        weights = models.listToArray(storage.retrieve(self.global_models[-1]['model_key']))
+        globalC = models.listToArray(storage.retrieve(self.global_models[-1]['global_C_key']))
         return self.update_global(weights, delta_weights,
                      nk,globalC,delta_c)
            
