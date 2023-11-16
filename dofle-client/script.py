@@ -14,16 +14,6 @@ from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Flatten
 
-def make_model():
- model = Sequential()
- model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', input_shape=(28, 28, 1)))
- model.add(MaxPooling2D((2, 2)))
- model.add(Flatten())
- model.add(Dense(100, activation='relu', kernel_initializer='he_uniform'))
- model.add(Dense(10, activation='softmax'))
-
- return model
-
 
 # Base URL of the central server and URLs of all endpoints
 baseUrl = "http://server:8000"
@@ -31,10 +21,22 @@ subscribeUrl = "/subscribe"
 sendModelUrl = "/model_updates"
 getGlobalModelUrl = "/get_global_model"
 
-
+# Time interval(seconds) between successive poll for global model
 POLL_INTERVAL = 60
 
+# Load the model
+def make_model():
+    model = Sequential()
+    model.add(Conv2D(32, (3, 3), activation='relu',
+              kernel_initializer='he_uniform', input_shape=(28, 28, 1)))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(Flatten())
+    model.add(Dense(100, activation='relu', kernel_initializer='he_uniform'))
+    model.add(Dense(10, activation='softmax'))
 
+    return model
+
+# Load train and test dataset
 def load_dataset():
     # load dataset
     (trainX, trainY), (testX, testY) = mnist.load_data()
@@ -52,7 +54,7 @@ def load_dataset():
     subset_Y = trainY[random_indices]
     return subset_X, subset_Y, testX, testY
 
-
+# Scale pixels
 def prep_pixels(train, test):
     # convert from integers to floats
     train_norm = train.astype('float32')
@@ -63,8 +65,9 @@ def prep_pixels(train, test):
     # return normalized images
     return train_norm, test_norm
 
+
 class Client:
-    def __init__(self, name=None, modelFile=None, dataFolder=None , lr = 0.01) -> None:
+    def __init__(self, name=None, modelFile=None, dataFolder=None, lr=0.01) -> None:
         # A string identifer for this particular client, defaults to
         # the Hostname
         self.name = name
@@ -85,15 +88,13 @@ class Client:
         # client with respect to the Federated Learning process
         self.version = None
 
+        # Load dataset and prepare the pixel data
         self.trainX, self.trainY, self.testX, self.testY = load_dataset()
-        # prepare pixel data
         self.trainX, self.testX = prep_pixels(self.trainX, self.testX)
-        self.baseClient = Fed_algo.ClientScaffold(self.trainX , self.trainY , self.testX , 
-                self.testY , 32 , make_model() , 
-                tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-                 , [tf.keras.metrics.CategoricalAccuracy()] 
-                 ,lr, optim = tf.keras.optimizers.legacy.SGD(learning_rate = lr))
-        
+        self.baseClient = Fed_algo.ClientScaffold(self.trainX, self.trainY, self.testX,
+                                                  self.testY, 32, make_model(),
+                                                  tf.keras.losses.CategoricalCrossentropy(from_logits=True), [tf.keras.metrics.CategoricalAccuracy()], lr, optim=tf.keras.optimizers.legacy.SGD(learning_rate=lr))
+
         # Number of datapoints the client model has been trained upon
         self.datapoints = len(self.trainX)
 
@@ -108,20 +109,21 @@ class Client:
         Returns:
             model: The loaded and compiled model
         """
-        
+
         if modelFile == None:
             modelFile = self.modelFile
-        
+
         try:
-            model = tf.keras.models.load_model(modelFile,compile = False)
+            model = tf.keras.models.load_model(modelFile, compile=False)
             model.compile(optimizer='adam',
-                        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                        metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
+                          loss=tf.keras.losses.SparseCategoricalCrossentropy(
+                              from_logits=True),
+                          metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
             return model
         except Exception as exp:
             print("Failed to load model: " + str(exp))
-    
-    def loadDataset(self,dataFolder = None):
+
+    def loadDataset(self, dataFolder=None):
         """Loads the dataset from the [dataFolder] directory. If the
            path is not provided, it will default to client's dataFolder.
            Atleast one of them should be non-None.
@@ -139,15 +141,15 @@ class Client:
 
         try:
             train_ds = tf.keras.utils.image_dataset_from_directory(
-                    dataFolder,
-                    seed = 123,
-                    image_size=(28, 28),
-                    batch_size = 1)
+                dataFolder,
+                seed=123,
+                image_size=(28, 28),
+                batch_size=1)
             return train_ds
         except Exception as exp:
             print("Failed to load dataset: " + str(exp))
-    
-    def train(self,train_ds = None,model = None,modelFile = None):
+
+    def train(self, train_ds=None, model=None, modelFile=None):
         """Trains the [model] with the [train_ds] and saves it as a h5
            model into the [modelFile] file. In case any of these params
            are None, they are loaded through the client's interface.
@@ -165,11 +167,12 @@ class Client:
             model = self.loadModel()
         if modelFile == None:
             modelFile = self.modelFile
-        
+
         try:
             normalization_layer = tf.keras.layers.Rescaling(1./255)
-            normalized_ds = train_ds.map(lambda x,y : (normalization_layer(x),y))
-            model.fit(normalized_ds,epochs = 1)
+            normalized_ds = train_ds.map(
+                lambda x, y: (normalization_layer(x), y))
+            model.fit(normalized_ds, epochs=1)
             self.datapoints += len(list(normalized_ds))
             model.save(modelFile)
         except Exception as exp:
@@ -226,10 +229,10 @@ class Client:
                         return False
                 else:
                     print("Response error: " +
-                        str(response.status_code) + ":" + response.text)
+                          str(response.status_code) + ":" + response.text)
             except Exception as exp:
                 print("Failed to get FL status: " + str(exp))
-            
+
             return True
 
         while keepPolling == True:
@@ -242,11 +245,11 @@ class Client:
         if globalModel is not None:
             C = Fed_algo.convert_tond(globalModel["globalC"])
             Global = Fed_algo.convert_tond(globalModel["weights"])
-            delta_weights,delta_C,n = self.baseClient.train(C , Global)
-            self.sendModelUpdates(delta_C,delta_weights,n)
+            delta_weights, delta_C, n = self.baseClient.train(C, Global)
+            self.sendModelUpdates(delta_C, delta_weights, n)
             self.pollForGlobalModel()
-        
-    def sendModelUpdates(self, delta_C = None,delta_weights = None,datapoints = None ):
+
+    def sendModelUpdates(self, delta_C=None, delta_weights=None, datapoints=None):
         """Sends the [model] updates to the server. If the [model] is
            not provided, it uses [modelFile] and client's implementation
            of loading model to get the model.
@@ -258,8 +261,8 @@ class Client:
 
         url = baseUrl + sendModelUrl
         try:
-            ##if model == None:
-            ##    model = self.loadModel(modelFile = modelFile)
+            # if model == None:
+            # model = self.loadModel(modelFile = modelFile)
 
             # weights = model.get_weights().tolist()
             delta_C = Fed_algo.convert_tolist(delta_C)
@@ -269,7 +272,7 @@ class Client:
                 "version": self.version,
                 "delta_weights": delta_weights,
                 "delta_C": delta_C,
-                "datapoints":datapoints
+                "datapoints": datapoints
             })
 
             if response.status_code == 204:
@@ -281,6 +284,7 @@ class Client:
                       str(response.status_code) + ":" + response.text)
         except Exception as exp:
             print("Failed to send model updates: " + str(exp))
+
 
 # Entry point
 if __name__ == '__main__':

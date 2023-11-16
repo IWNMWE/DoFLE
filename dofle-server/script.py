@@ -1,10 +1,7 @@
 # Init server script
-from flask import Flask, request
-import numpy as np
-import asyncio
+from flask import Flask
 import tensorflow as tf
 import models
-import io
 
 # Import storage class
 from storage import Storage
@@ -14,7 +11,7 @@ app = Flask(__name__)
 
 # Import federated learning functionalities
 from federate_learning import FederatedLearningComponent
-fed = FederatedLearningComponent("scaffold",1)
+fed = FederatedLearningComponent("scaffold",1, 3)
 
 
 
@@ -25,6 +22,7 @@ import routes
 # Entry point
 if __name__ == '__main__':
 
+    # Initialise the xfirst global model
     global_C = models.load_model()
 
     weights = models.arrayToList(global_C.get_weights())
@@ -35,7 +33,7 @@ if __name__ == '__main__':
         i.fill(0)
 
     temp = models.arrayToList(temp)
-    key_dash = storage.store("c", temp)
+    key_dash = storage.store("g", temp)
 
     fed.global_models.append({
         "version" : 1, 
@@ -43,6 +41,7 @@ if __name__ == '__main__':
         "global_C_key"  : key_dash
     })
 
+    # Start the flask app
     app.run(host='0.0.0.0', port=8000)
     while True:
         pass
