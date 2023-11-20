@@ -6,6 +6,23 @@ from tensorflow.keras.datasets import mnist
 import Fed_algo
 import os
 import time
+import logging
+import sys
+
+def setup_custom_logger(name):
+    formatter = logging.Formatter(fmt='%(asctime)s %(message)s',
+                                  datefmt='%Y-%m-%d %H:%M:%S')
+    handler = logging.FileHandler('log.txt', mode='w')
+    handler.setFormatter(formatter)
+    screen_handler = logging.StreamHandler(stream=sys.stdout)
+    screen_handler.setFormatter(formatter)
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+    logger.addHandler(screen_handler)
+    return logger
+
+logger = setup_custom_logger('Logger')
 
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
@@ -121,7 +138,7 @@ class Client:
                           metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
             return model
         except Exception as exp:
-            print("Failed to load model: " + str(exp))
+            logger.error("Failed to load model: " + str(exp))
 
     def loadDataset(self, dataFolder=None):
         """Loads the dataset from the [dataFolder] directory. If the
@@ -147,7 +164,7 @@ class Client:
                 batch_size=1)
             return train_ds
         except Exception as exp:
-            print("Failed to load dataset: " + str(exp))
+            logger.error("Failed to load dataset: " + str(exp))
 
     def train(self, train_ds=None, model=None, modelFile=None):
         """Trains the [model] with the [train_ds] and saves it as a h5
@@ -176,7 +193,7 @@ class Client:
             self.datapoints += len(list(normalized_ds))
             model.save(modelFile)
         except Exception as exp:
-            print("Failed to train model: " + str(exp))
+            logger.error("Failed to train model: " + str(exp))
 
     def subscribeToFL(self):
         """Calls the subscribe endpoint and subscribes the client to
@@ -192,12 +209,12 @@ class Client:
 
             if response.status_code == 200:
                 self.id = response.json()["client"]["id"]
-                print("Subscribed with id " + str(self.id))
+                logger.info("Subscribed with id " + str(self.id))
             else:
-                print("Response error: " +
+                logger.error("Response error: " +
                       str(response.status_code) + ":" + response.text)
         except Exception as exp:
-            print("Request exception: " + str(exp))
+            logger.error("Request exception: " + str(exp))
 
     def pollForGlobalModel(self):
         """Polls the server until it gets the global model. If the client
@@ -218,7 +235,7 @@ class Client:
 
                 if response.status_code == 200:
                     status = response.json()["status"]
-                    print(status)
+                    logger.info(status)
                     if "not" in status:
                         # Poll again after sometime later
                         return True
@@ -228,10 +245,10 @@ class Client:
                         self.version = globalModel["version"]
                         return False
                 else:
-                    print("Response error: " +
+                    logger.error("Response error: " +
                           str(response.status_code) + ":" + response.text)
             except Exception as exp:
-                print("Failed to get FL status: " + str(exp))
+                logger.error("Failed to get FL status: " + str(exp))
 
             return True
 
@@ -276,14 +293,14 @@ class Client:
             })
 
             if response.status_code == 204:
-                print("Sent model updates")
+                logger.info("Sent model updates")
             elif response.status_code == 200:
-                print(response.text)
+                logger.info(response.text)
             else:
-                print("Response error: " +
+                logger.error("Response error: " +
                       str(response.status_code) + ":" + response.text)
         except Exception as exp:
-            print("Failed to send model updates: " + str(exp))
+            logger.error("Failed to send model updates: " + str(exp))
 
 
 # Entry point
