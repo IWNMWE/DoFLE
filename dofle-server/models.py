@@ -10,14 +10,11 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Flatten
 
 # Load the model
-def load_model():
+def load_model(model_path):
     model = Sequential()
-    model.add(Conv2D(32, (3, 3), activation='relu',
-              kernel_initializer='he_uniform', input_shape=(28, 28, 1)))
-    model.add(MaxPooling2D((2, 2)))
-    model.add(Flatten())
-    model.add(Dense(100, activation='relu', kernel_initializer='he_uniform'))
-    model.add(Dense(10, activation='softmax'))
+    model.add(Flatten(input_shape=(28, 28)))
+    model.add(Dense(128, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
+    model.add(Dense(10, activation='softmax', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
 
     return model
 

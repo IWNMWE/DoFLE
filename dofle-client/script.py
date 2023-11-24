@@ -33,7 +33,7 @@ from tensorflow.keras.layers import Flatten
 
 
 # Base URL of the central server and URLs of all endpoints
-baseUrl = "http://server:8000"
+baseUrl = "http://10.53.87.199:8000"
 subscribeUrl = "/subscribe"
 sendModelUrl = "/model_updates"
 getGlobalModelUrl = "/get_global_model"
@@ -41,17 +41,15 @@ getGlobalModelUrl = "/get_global_model"
 # Time interval(seconds) between successive poll for global model
 POLL_INTERVAL = 60
 
-# Load the model
-def make_model():
+
+def make_model(model_path):
     model = Sequential()
-    model.add(Conv2D(32, (3, 3), activation='relu',
-              kernel_initializer='he_uniform', input_shape=(28, 28, 1)))
-    model.add(MaxPooling2D((2, 2)))
-    model.add(Flatten())
-    model.add(Dense(100, activation='relu', kernel_initializer='he_uniform'))
-    model.add(Dense(10, activation='softmax'))
+    model.add(Flatten(input_shape=(28, 28)))
+    model.add(Dense(128, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
+    model.add(Dense(10, activation='softmax', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
 
     return model
+
 
 # Load train and test dataset
 def load_dataset():
