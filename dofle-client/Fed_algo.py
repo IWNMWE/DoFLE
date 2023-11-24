@@ -106,6 +106,39 @@ class ClientFedAvg:
 
         return delta_weights, len(self.trainX)
 
+class ClientFedSGD:
+    def __init__(self, trainX, trainY, testX,
+                 testY, batchSize, model,
+                 loss, metrics, lr, optim=tf.keras.optimizers.legacy.SGD(1)):
+
+        self.model = model
+        self.trainX = trainX
+        self.trainY = trainY
+        self.testX = testX
+        self.testY = testY
+        self.batch = batchSize
+        self.lr = float(lr)
+        self.losses = loss
+        self.metrics = metrics
+        self.optim = optim
+        self.optim.learning_rate = self.lr
+
+    def train(self, C, Global):
+        epochs = 1
+        self.model.compile(optimizer=self.optim,
+                           loss=self.loss, metrics=self.metrics)
+        self.model.set_weights(Global)
+
+        self.model.fit(
+            self.trainX, self.trainY, validation_data=(self.testX,
+                                                       self.testY), epochs=epoch)
+        weights = list(self.model.get_weights())
+        delta_weights = list(weights)
+        for i in range(0, len(weights)):
+            delta_weights[i] -= Global[i]
+
+        return delta_weights, len(self.trainX)
+
 
 def convert_tolist(C):
     for i in range(0, len(C)):
