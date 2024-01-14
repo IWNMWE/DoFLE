@@ -97,8 +97,6 @@ def receiveModelUpdates():
         return INVALID_REQUEST
 
 # !!!Deprecated : Poll for the global model directly
-
-
 @app.route('/fl_process_status', methods=['GET'])
 def flProcessStatus():
     """Returns the status of the Federated Learning process by

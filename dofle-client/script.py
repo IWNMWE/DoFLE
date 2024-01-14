@@ -33,10 +33,13 @@ from tensorflow.keras.layers import Flatten
 
 
 # Base URL of the central server and URLs of all endpoints
-baseUrl = "http://10.53.87.199:8000"
+baseUrl = "https://nginx"
 subscribeUrl = "/subscribe"
 sendModelUrl = "/model_updates"
 getGlobalModelUrl = "/get_global_model"
+
+# Verify SSL certificate
+verify = False
 
 # Time interval(seconds) between successive poll for global model
 POLL_INTERVAL = 60
@@ -203,7 +206,7 @@ class Client:
         try:
             response = requests.post(url, json={
                 "name": self.name
-            })
+            }, verify=verify)
 
             if response.status_code == 200:
                 self.id = response.json()["client"]["id"]
@@ -229,7 +232,7 @@ class Client:
             try:
                 response = requests.get(url, json={
                     "id": self.id
-                })
+                }, verify=verify)
 
                 if response.status_code == 200:
                     status = response.json()["status"]
@@ -288,7 +291,7 @@ class Client:
                 "delta_weights": delta_weights,
                 "delta_C": delta_C,
                 "datapoints": datapoints
-            })
+            }, verify=verify)
 
             if response.status_code == 204:
                 logger.info("Sent model updates")

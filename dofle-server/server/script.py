@@ -2,6 +2,7 @@
 from flask import Flask
 import tensorflow as tf
 import models
+from waitress import serve
 
 # Import storage class
 from storage import Storage
@@ -18,6 +19,8 @@ fed = FederatedLearningComponent("scaffold",1, 3)
 # Import the server routes
 import routes
 
+# Deployment mode
+mode = "Prod"
 
 # Entry point
 if __name__ == '__main__':
@@ -42,6 +45,9 @@ if __name__ == '__main__':
     })
 
     # Start the flask app
-    app.run(host='0.0.0.0', port=8000)
+    if mode == "Dev":
+        app.run(host='0.0.0.0', port=8000)
+    else:
+        serve(app, host='0.0.0.0', port=8000)
     while True:
         pass

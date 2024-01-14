@@ -8,9 +8,10 @@ from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Flatten
+import tensorflow as tf
 
 # Load the model
-def load_model(model_path):
+def load_model():
     model = Sequential()
     model.add(Flatten(input_shape=(28, 28)))
     model.add(Dense(128, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=tf.keras.regularizers.l2(0.001)))

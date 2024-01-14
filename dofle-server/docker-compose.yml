@@ -1,7 +1,16 @@
 services:
   server:
-    build: .
-    ports:
-      - "8000:8000"
+    build: ./server
+    expose:
+      - 8000
   redis:
     image: "redis:alpine"
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - server
+    volumes:
+     - /path_to/certs:/etc/nginx/certs
