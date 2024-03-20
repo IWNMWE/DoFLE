@@ -1,8 +1,5 @@
 # Init client script
 import requests
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.datasets import mnist
 import Fed_algo
 import os
 import time
@@ -24,12 +21,12 @@ def setup_custom_logger(name):
 
 logger = setup_custom_logger('Logger')
 
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import MaxPooling2D
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Flatten
+
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+import torch.nn.functional as F
 
 
 # Base URL of the central server and URLs of all endpoints
@@ -44,44 +41,56 @@ verify = False
 # Time interval(seconds) between successive poll for global model
 POLL_INTERVAL = 60
 
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear_stack= nn.Sequential(
+            nn.Linear(28*28, 128),
+            nn.ReLU(),
+            nn.Linear(128, 10),
+            nn.Softmax(dim=1)
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.linear_stack(x)
+        return logits
 
 def make_model(model_path):
-    model = Sequential()
-    model.add(Flatten(input_shape=(28, 28)))
-    model.add(Dense(128, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
-    model.add(Dense(10, activation='softmax', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
+    model = NeuralNetwork()
 
     return model
 
 
 # Load train and test dataset
-def load_dataset():
-    # load dataset
-    (trainX, trainY), (testX, testY) = mnist.load_data()
-    # reshape dataset to have a single channel
-    trainX = trainX.reshape((trainX.shape[0], 28, 28, 1))
-    testX = testX.reshape((testX.shape[0], 28, 28, 1))
-    # one hot encode target values
-    trainY = to_categorical(trainY)
-    testY = to_categorical(testY)
+# def load_dataset():
+#     # load dataset
+#     (trainX, trainY), (testX, testY) = mnist.load_data()
+#     # reshape dataset to have a single channel
+#     trainX = trainX.reshape((trainX.shape[0], 28, 28, 1))
+#     testX = testX.reshape((testX.shape[0], 28, 28, 1))
+#     # one hot encode target values
+#     trainY = to_categorical(trainY)
+#     testY = to_categorical(testY)
 
-    random_indices = np.random.choice(len(trainX), 10016, replace=False)
+#     random_indices = np.random.choice(len(trainX), 10016, replace=False)
 
-    # Select the subset of data and labels
-    subset_X = trainX[random_indices]
-    subset_Y = trainY[random_indices]
-    return subset_X, subset_Y, testX, testY
+#     # Select the subset of data and labels
+#     subset_X = trainX[random_indices]
+#     subset_Y = trainY[random_indices]
+#     return subset_X, subset_Y, testX, testY
 
-# Scale pixels
-def prep_pixels(train, test):
-    # convert from integers to floats
-    train_norm = train.astype('float32')
-    test_norm = test.astype('float32')
-    # normalize to range 0-1
-    train_norm = train_norm / 255.0
-    test_norm = test_norm / 255.0
-    # return normalized images
-    return train_norm, test_norm
+# # Scale pixels
+# def prep_pixels(train, test):
+#     # convert from integers to floats
+#     train_norm = train.astype('float32')
+#     test_norm = test.astype('float32')
+#     # normalize to range 0-1
+#     train_norm = train_norm / 255.0
+#     test_norm = test_norm / 255.0
+#     # return normalized images
+#     return train_norm, test_norm
 
 
 class Client:
@@ -111,7 +120,7 @@ class Client:
         self.trainX, self.testX = prep_pixels(self.trainX, self.testX)
         self.baseClient = Fed_algo.ClientScaffold(self.trainX, self.trainY, self.testX,
                                                   self.testY, 32, make_model(),
-                                                  tf.keras.losses.CategoricalCrossentropy(from_logits=True), [tf.keras.metrics.CategoricalAccuracy()], lr, optim=tf.keras.optimizers.legacy.SGD(learning_rate=lr))
+                                                  tf.keras.losses.CategoricalCrossentropy(from_logits=True), [tf.keras.metrics.CategoricalAccuracy()], lr, optim=torch.optim.SGD)
 
         # Number of datapoints the client model has been trained upon
         self.datapoints = len(self.trainX)
