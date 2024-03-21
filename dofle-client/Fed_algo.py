@@ -31,26 +31,24 @@ class ClientScaffold:
         self.optimizer = optim
         self.optimizer.learning_rate = self.lr
 
-
-
     def train_loop(self, C, Global):
-      size = len(self.dataloader.dataset)#
+      size = len(self.dataloader.dataset)
       # Set the model to training mode - important for batch normalization and dropout layers
-      self.model.train()#
+      self.model.train()
       for batch, (X, y) in enumerate(self.dataloader):
         # Compute prediction and loss
         pred = self.model(X)
-        loss = self.loss_fn(pred, y)#
+        loss = self.loss_fn(pred, y)
 
         # Backpropagation
-        self.loss.backward()#
-        self.optimizer.step()#
-        self.optimizer.zero_grad()#
+        self.loss.backward()
+        self.optimizer.step()
+        self.optimizer.zero_grad()
         i = 0
         with torch.no_grad():
           for param in self.model.parameters():
-              param.data = param.data + ((1 / (len(batches) * self.lr)) * \ #
-                          (C[i] - self.c[i]))#
+              param.data = param.data + ((1 / (len(self.batch) * self.lr)) * \
+                          (C[i] - self.c[i]))
               i += 1
       weights = []
       with torch.no_grad():
@@ -60,8 +58,8 @@ class ClientScaffold:
       delta_weights = list(weights)
       delta_C = list(self.cPlus)#
       for i in range(0, len(weights)):
-            self.cPlus[i] = self.c[i] - C[i] + (1 / ((1 / (len(batches) * self.lr))
-                * (len(self.trainX) / self.batch))) * (Global[i] - weights[i])#
+            self.cPlus[i] = self.c[i] - C[i] + (1 / ((1 / (len(self.batch) * self.lr))
+                * (len(self.trainX) / self.batch))) * (Global[i] - weights[i])
             delta_weights[i] -= Global[i]
             delta_C[i] = self.cPlus[i] - self.c[i]
       self.c = list(self.cPlus)
