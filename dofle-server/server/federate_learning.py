@@ -2,7 +2,9 @@
 from enum import Enum
 from __main__ import storage
 import models
-import tensorflow as tf
+# import tensorflow as tf
+import torch
+import torch.nn as nn
 
 # Number of clients to be selected per round
 CLIENT_BATCH_SIZE = 2
@@ -126,10 +128,38 @@ class FederatedLearningComponent():
                 gw, gC = self.server_train()
                 model = models.load_model()
                 model.set_weights(gw)
-                model.compile(optimizer=tf.keras.optimizers.SGD(), loss=tf.keras.losses.CategoricalCrossentropy(
-                    from_logits=True), metrics=[tf.keras.metrics.CategoricalAccuracy()])
+                # model.compile(optimizer=tf.keras.optimizers.SGD(), loss=tf.keras.losses.CategoricalCrossentropy(
+                #     from_logits=True), metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
-                print("Global:", model.evaluate(testX, testY), "\n")
+                
+                model.eval()
+                # Loss function (already from_logits=True in PyTorch's CategoricalCrossEntropy)
+                loss_fn = nn.CrossEntropyLoss()
+
+                # Define a function to calculate accuracy (same as previous example)
+                def accuracy(outputs, labels):
+                    """
+                    Calculates categorical accuracy.
+                    Args:
+                        outputs: Predicted labels from the model (tensor of shape [batch_size, num_classes]).
+                        labels: Ground truth labels (tensor of shape [batch_size]).
+                    Returns:
+                        Categorical accuracy (float).
+                    """
+
+                    _, predicted = torch.max(outputs, dim=1)
+                    correct = torch.sum(predicted == labels).float()
+                    total = float(labels.size(0))
+                    accuracy = correct / total
+
+                    return accuracy
+                
+                # Evaluate the model
+                with torch.no_grad():  # Disable gradient computation during evaluation
+                    outputs = model(testX)
+                    loss = loss_fn(outputs, testY)
+                    acc = accuracy(outputs, testY)
+                # print("Global:", model.evaluate(testX, testY), "\n")
 
                 # Store the new global model (aggregated)
                 key = storage.store("w", models.arrayToList(gw))

@@ -21,6 +21,12 @@ class NeuralNetwork(nn.Module):
         x = self.flatten(x)
         logits = self.linear_stack(x)
         return logits
+    
+    def set_weights(self, weights):
+        self.linear_stack[0].weight = nn.Parameter(torch.Tensor(weights[0]))
+        self.linear_stack[0].bias = nn.Parameter(torch.Tensor(weights[1]))
+        self.linear_stack[2].weight = nn.Parameter(torch.Tensor(weights[2]))
+        self.linear_stack[2].bias = nn.Parameter(torch.Tensor(weights[3]))
 
 
 # Load the model
@@ -52,18 +58,31 @@ def load_model():
 #     # return normalized images
 #     return train_norm, test_norm
 
-# # Serialise ndarray to a list
-# def arrayToList(array: np.ndarray):
+# Serialise ndarray to a list
+# def arrayToList(array: np.ndarray):         # convert torch tensor to list
 #     new = array.copy()
 #     for i in range(0, len(new)):
 #         new[i] = new[i].tolist()
 
 #     return new
 
-# # Deserialise list into a ndarray
+# Deserialise list into a ndarray
 # def listToArray(l: list):
 #     new = l.copy()
 #     for i in range(0, len(new)):
 #         new[i] = np.asarray(new[i],  dtype='float32')
 
 #     return new
+
+
+# convert torch tensor to list
+def arrayToList(torch_tensor: torch.Tensor):        
+    new = torch_tensor.tolist()
+
+    return new
+
+# Deserialise list into a torch tensor
+def listToArray(l: list):
+    new = a_tensor = torch.Tensor(l)        # returns a tensor with dtype as float32
+    
+    return new
