@@ -1,8 +1,7 @@
 FROM python:3.10.12-slim
 
 RUN pip3 install requests
-RUN pip3 install numpy 
-RUN pip3 install tensorflow --no-cache-dir
+RUN pip3 install torch torchvision
 
 WORKDIR /usr/app/src
 

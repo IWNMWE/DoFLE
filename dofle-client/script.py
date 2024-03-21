@@ -5,6 +5,12 @@ import os
 import time
 import logging
 import sys
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+import torch.nn.functional as F
+from torchvision.transforms import ToTensor
 
 def setup_custom_logger(name):
     formatter = logging.Formatter(fmt='%(asctime)s %(message)s',
@@ -20,13 +26,6 @@ def setup_custom_logger(name):
     return logger
 
 logger = setup_custom_logger('Logger')
-
-
-import torch
-from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
-import torch.nn.functional as F
 
 
 # Base URL of the central server and URLs of all endpoints
@@ -64,34 +63,23 @@ def make_model(model_path):
 
 
 # Load train and test dataset
-# def load_dataset():
-#     # load dataset
-#     (trainX, trainY), (testX, testY) = mnist.load_data()
-#     # reshape dataset to have a single channel
-#     trainX = trainX.reshape((trainX.shape[0], 28, 28, 1))
-#     testX = testX.reshape((testX.shape[0], 28, 28, 1))
-#     # one hot encode target values
-#     trainY = to_categorical(trainY)
-#     testY = to_categorical(testY)
+def load_dataset():
+    # load dataset
+    training_data = datasets.MNIST(
+        root="data",
+        train=True,
+        download=True,
+        transform=ToTensor()
+    )
 
-#     random_indices = np.random.choice(len(trainX), 10016, replace=False)
+    test_data = datasets.MNIST(
+        root="data",
+        train=False,
+        download=True,
+        transform=ToTensor()
+    )
 
-#     # Select the subset of data and labels
-#     subset_X = trainX[random_indices]
-#     subset_Y = trainY[random_indices]
-#     return subset_X, subset_Y, testX, testY
-
-# # Scale pixels
-# def prep_pixels(train, test):
-#     # convert from integers to floats
-#     train_norm = train.astype('float32')
-#     test_norm = test.astype('float32')
-#     # normalize to range 0-1
-#     train_norm = train_norm / 255.0
-#     test_norm = test_norm / 255.0
-#     # return normalized images
-#     return train_norm, test_norm
-
+    return training_data, test_data
 
 class Client:
     def __init__(self, name=None, modelFile=None, dataFolder=None, lr=0.01) -> None:
@@ -116,10 +104,8 @@ class Client:
         self.version = None
 
         # Load dataset and prepare the pixel data
-        self.trainX, self.trainY, self.testX, self.testY = load_dataset()
-        self.trainX, self.testX = prep_pixels(self.trainX, self.testX)
-        self.baseClient = Fed_algo.ClientScaffold(self.trainX, self.trainY, self.testX,
-                                                  self.testY, 32, make_model(),
+        self.training_data, self.test_data = load_dataset()
+        self.baseClient = Fed_algo.ClientScaffold(self.training_data, 32, make_model(),
                                                   tf.keras.losses.CategoricalCrossentropy(from_logits=True), [tf.keras.metrics.CategoricalAccuracy()], lr, optim=torch.optim.SGD)
 
         # Number of datapoints the client model has been trained upon
@@ -141,12 +127,7 @@ class Client:
             modelFile = self.modelFile
 
         try:
-            model = tf.keras.models.load_model(modelFile, compile=False)
-            model.compile(optimizer='adam',
-                          loss=tf.keras.losses.SparseCategoricalCrossentropy(
-                              from_logits=True),
-                          metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
-            return model
+            return make_model()
         except Exception as exp:
             logger.error("Failed to load model: " + str(exp))
 
@@ -160,19 +141,15 @@ class Client:
                         loaded
 
         Returns:
-            train_ds: The loaded training data set
+            train_dataloader: The training dataloader
         """
 
         if dataFolder == None:
             dataFolder = self.dataFolder
 
         try:
-            train_ds = tf.keras.utils.image_dataset_from_directory(
-                dataFolder,
-                seed=123,
-                image_size=(28, 28),
-                batch_size=1)
-            return train_ds
+            train_dataloader, _ = load_dataset()
+            return train_dataloader
         except Exception as exp:
             logger.error("Failed to load dataset: " + str(exp))
 
@@ -189,7 +166,7 @@ class Client:
         """
 
         if train_ds == None:
-            train_ds = self.loadDataset()
+            train_dataloader = self.loadDataset()
         if model == None:
             model = self.loadModel()
         if modelFile == None:
