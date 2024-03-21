@@ -106,7 +106,7 @@ class Client:
         # Load dataset and prepare the pixel data
         self.training_data, self.test_data = load_dataset()
         self.baseClient = Fed_algo.ClientScaffold(self.training_data, 32, make_model(),
-                                                  tf.keras.losses.CategoricalCrossentropy(from_logits=True), [tf.keras.metrics.CategoricalAccuracy()], lr, optim=torch.optim.SGD)
+                                                  torch.nn.CrossEntropyLoss(), lr, optim=torch.optim.SGD)
 
         # Number of datapoints the client model has been trained upon
         self.datapoints = len(self.trainX)
@@ -249,7 +249,7 @@ class Client:
         if globalModel is not None:
             C = Fed_algo.convert_tond(globalModel["globalC"])
             Global = Fed_algo.convert_tond(globalModel["weights"])
-            delta_weights, delta_C, n = self.baseClient.train(C, Global)
+            delta_weights, delta_C, n = self.baseClient.train_loop(C, Global)
             self.sendModelUpdates(delta_C, delta_weights, n)
             self.pollForGlobalModel()
 

@@ -18,7 +18,7 @@ Currently supported methods :
 
 class ClientScaffold:
     def __init__(self, dataloader, batchSize, model,
-                 loss, metrics, lr, optim):
+                 loss, lr, optim):
 
         self.model = model
         self.c = self.initializeC()
@@ -27,7 +27,6 @@ class ClientScaffold:
         self.batch = batchSize
         self.lr = float(lr)
         self.loss_fn = loss
-        self.metrics = metrics
         self.optimizer = optim
         self.optimizer.learning_rate = self.lr
 
@@ -56,7 +55,7 @@ class ClientScaffold:
               weights.append(param.data)
 
       delta_weights = list(weights)
-      delta_C = list(self.cPlus)#
+      delta_C = list(self.cPlus)
       for i in range(0, len(weights)):
             self.cPlus[i] = self.c[i] - C[i] + (1 / ((1 / (len(self.batch) * self.lr))
                 * (len(self.trainX) / self.batch))) * (Global[i] - weights[i])
